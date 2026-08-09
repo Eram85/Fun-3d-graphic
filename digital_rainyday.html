@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Digital Rain World</title>
+
+<style>
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #020508;
+    font-family: Arial, sans-serif;
+    touch-action: none;
+}
+
+canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.title {
+    position: fixed;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    z-index: 10;
+
+    color: rgba(180, 230, 220, 0.8);
+
+    font-size: 12px;
+    letter-spacing: 9px;
+
+    white-space: nowrap;
+
+    pointer-events: none;
+}
+
+.subtitle {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    z-index: 10;
+
+    color: rgba(120, 200, 190, 0.35);
+
+    font-size: 8px;
+    letter-spacing: 4px;
+
+    pointer-events: none;
+}
+
+.bottomText {
+    position: fixed;
+
+    bottom: 30px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 10;
+
+    color: rgba(170, 220, 210, 0.45);
+
+    font-size: 10px;
+    letter-spacing: 5px;
+
+    pointer-events: none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="title">
+    DIGITAL RAIN WORLD
+</div>
+
+<div class="subtitle">
+    CITY // 2087
+</div>
+
+<div class="bottomText">
+    MOVE • TOUCH • EXPLORE
+</div>
+
+<canvas id="canvas"></canvas>
+
+
+<script>
+
+/* =====================================================
+   CANVAS
+===================================================== */
+
+const canvas =
+    document.getElementById("canvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+let W = window.innerWidth;
+let H = window.innerHeight;
+
+let DPR =
+    Math.min(
+        window.devicePixelRatio || 1,
+        2
+    );
+
+
+function resize() {
+
+    W = window.innerWidth;
+    H = window.innerHeight;
+
+    DPR =
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
+
+    canvas.width =
+        W * DPR;
+
+    canvas.height =
+        H * DPR;
+
+    canvas.style.width =
+        W + "px";
+
+    canvas.style.height =
+        H + "px";
+
+    ctx.setTransform(
+        DPR,
+        0,
+        0,
+        DPR,
+        0,
+        0
+    );
+
+    createBuildings();
+
+    createRain();
+
+    createWindows();
+}
+
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+
+/* =====================================================
+   MOUSE
+===================================================== */
+
+const mouse = {
+
+    x: W / 2,
+    y: H / 2,
+
+    targetX: W / 2,
+    targetY: H / 2,
+
+    down: false
+
+};
+
+
+window.addEventListener(
+    "pointermove",
+    function(e) {
+
+        mouse.targetX =
+            e.clientX;
+
+        mouse.targetY =
+            e.clientY;
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerdown",
+    function(e) {
+
+        mouse.down = true;
+
+        mouse.targetX =
+            e.clientX;
+
+        mouse.targetY =
+            e.clientY;
+
+        createRipple(
+            e.clientX,
+            e.clientY
+        );
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerup",
+    function() {
+
+        mouse.down = false;
+
+    }
+);
+
+
+/* =====================================================
+   RANDOM
+===================================================== */
+
+function random(min, max) {
+
+    return Math.random() *
+        (max - min) + min;
+
+}
+
+
+/* =====================================================
+   BUILDINGS
+===================================================== */
+
+let buildings = [];
+
+
+function createBuildings() {
+
+    buildings = [];
+
+    let x = -20;
+
+    while (
+        x < W + 100
+    ) {
+
+        const buildingWidth =
+            random(
+                70,
+                160
+            );
+
+        const buildingHeight =
+            random(
+                H * 0.30,
+                H * 0.75
+            );
+
+
+        buildings.push({
+
+            x: x,
+
+            y:
+                H -
+                buildingHeight,
+
+            width:
+                buildingWidth,
+
+            height:
+                buildingHeight,
+
+            depth:
+                random(
+                    0.5,
+                    1
+                ),
+
+            type:
+                Math.floor(
+                    random(
+                        0,
+                        3
+                    )
+                )
+
+        });
+
+
+        x +=
+            buildingWidth +
+            random(
+                5,
+                20
+            );
+
+    }
+
+}
+
+
+/* =====================================================
+   BUILDING WINDOWS
+===================================================== */
+
+let windows = [];
+
+
+function createWindows() {
+
+    windows = [];
+
+
+    buildings.forEach(
+        function(b) {
+
+            const cols =
+                Math.floor(
+                    b.width / 20
+                );
+
+            const rows =
+                Math.floor(
+                    b.height / 27
+                );
+
+
+            for (
+                let row = 0;
+                row < rows;
+                row++
+            ) {
+
+                for (
+                    let col = 0;
+                    col < cols;
+                    col++
+                ) {
+
+                    if (
+                        Math.random() <
+                        0.55
+                    ) {
+
+                        windows.push({
+
+                            x:
+                                b.x +
+                                10 +
+                                col * 20,
+
+                            y:
+                                b.y +
+                                15 +
+                                row * 27,
+
+                            width:
+                                random(
+                                    5,
+                                    9
+                                ),
+
+                            height:
+                                random(
+                                    7,
+                                    13
+                                ),
+
+                            brightness:
+                                random(
+                                    0.3,
+                                    1
+                                ),
+
+                            phase:
+                                random(
+                                    0,
+                                    Math.PI * 2
+                                )
+
+                        });
+
+                    }
+
+                }
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   NEON SIGNS
+===================================================== */
+
+const signs = [
+
+    "NOVA",
+    "2049",
+    "CYBER",
+    "VOID",
+    "NEON",
+    "SYSTEM",
+    "01",
+    "NIGHT",
+    "雨",
+    "CITY"
+
+];
+
+
+let neonSigns = [];
+
+
+function createSigns() {
+
+    neonSigns = [];
+
+
+    buildings.forEach(
+        function(b, index) {
+
+            if (
+                Math.random() <
+                0.45
+            ) {
+
+                neonSigns.push({
+
+                    x:
+                        b.x +
+                        b.width * 0.5,
+
+                    y:
+                        b.y +
+                        random(
+                            50,
+                            b.height * 0.55
+                        ),
+
+                    text:
+                        signs[
+                            Math.floor(
+                                Math.random() *
+                                signs.length
+                            )
+                        ],
+
+                    scale:
+                        random(
+                            0.7,
+                            1.3
+                        ),
+
+                    phase:
+                        random(
+                            0,
+                            Math.PI * 2
+                        )
+
+                });
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   RAIN
+===================================================== */
+
+let rain = [];
+
+
+function createRain() {
+
+    rain = [];
+
+    for (
+        let i = 0;
+        i < 1100;
+        i++
+    ) {
+
+        rain.push({
+
+            x:
+                random(
+                    -100,
+                    W + 100
+                ),
+
+            y:
+                random(
+                    -H,
+                    H
+                ),
+
+            length:
+                random(
+                    12,
+                    35
+                ),
+
+            speed:
+                random(
+                    8,
+                    22
+                ),
+
+            alpha:
+                random(
+                    0.2,
+                    0.8
+                ),
+
+            width:
+                random(
+                    0.5,
+                    1.5
+                )
+
+        });
+
+    }
+
+}
+
+
+/* =====================================================
+   RIPPLE
+===================================================== */
+
+let ripples = [];
+
+
+function createRipple(x, y) {
+
+    ripples.push({
+
+        x: x,
+
+        y: y,
+
+        radius: 5,
+
+        alpha: 1
+
+    });
+
+}
+
+
+/* =====================================================
+   BACKGROUND
+===================================================== */
+
+function drawBackground() {
+
+    const gradient =
+        ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            H
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "#01060b"
+    );
+
+    gradient.addColorStop(
+        0.35,
+        "#03131b"
+    );
+
+    gradient.addColorStop(
+        0.65,
+        "#052029"
+    );
+
+    gradient.addColorStop(
+        1,
+        "#020607"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =====================================================
+   MOON / SKY LIGHT
+===================================================== */
+
+function drawSkyLight(time) {
+
+    const glow =
+        ctx.createRadialGradient(
+            W * 0.75,
+            H * 0.18,
+            10,
+            W * 0.75,
+            H * 0.18,
+            H * 0.6
+        );
+
+
+    glow.addColorStop(
+        0,
+        "rgba(40,180,180,0.12)"
+    );
+
+    glow.addColorStop(
+        0.4,
+        "rgba(20,100,120,0.04)"
+    );
+
+    glow.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        glow;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+
+    /* Moon */
+
+    ctx.fillStyle =
+        "rgba(170,240,230,0.15)";
+
+    ctx.shadowBlur = 40;
+
+    ctx.shadowColor =
+        "#60e0d0";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        W * 0.78,
+        H * 0.17,
+        35,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+}
+
+
+/* =====================================================
+   BUILDINGS
+===================================================== */
+
+function drawBuildings(time) {
+
+    buildings.forEach(
+        function(b, index) {
+
+            /*
+             * Main building.
+             */
+
+            const gradient =
+                ctx.createLinearGradient(
+                    b.x,
+                    b.y,
+                    b.x + b.width,
+                    H
+                );
+
+
+            gradient.addColorStop(
+                0,
+                "#081b24"
+            );
+
+            gradient.addColorStop(
+                0.5,
+                "#06131a"
+            );
+
+            gradient.addColorStop(
+                1,
+                "#020708"
+            );
+
+
+            ctx.fillStyle =
+                gradient;
+
+
+            ctx.fillRect(
+                b.x,
+                b.y,
+                b.width,
+                b.height
+            );
+
+
+            /*
+             * Building outline.
+             */
+
+            ctx.strokeStyle =
+                "rgba(50,210,190,0.18)";
+
+            ctx.lineWidth = 1;
+
+
+            ctx.strokeRect(
+                b.x,
+                b.y,
+                b.width,
+                b.height
+            );
+
+
+            /*
+             * Rooftop.
+             */
+
+            ctx.fillStyle =
+                "#0a242c";
+
+
+            ctx.fillRect(
+                b.x - 3,
+                b.y - 6,
+                b.width + 6,
+                6
+            );
+
+
+            /*
+             * Antenna.
+             */
+
+            if (
+                b.type === 1
+            ) {
+
+                ctx.strokeStyle =
+                    "rgba(50,220,200,0.35)";
+
+                ctx.lineWidth = 2;
+
+
+                ctx.beginPath();
+
+                ctx.moveTo(
+                    b.x +
+                    b.width / 2,
+
+                    b.y - 6
+                );
+
+                ctx.lineTo(
+                    b.x +
+                    b.width / 2,
+
+                    b.y - 55
+                );
+
+                ctx.stroke();
+
+
+                ctx.fillStyle =
+                    "#6ffff0";
+
+                ctx.shadowBlur = 15;
+
+                ctx.shadowColor =
+                    "#40ffe0";
+
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    b.x +
+                    b.width / 2,
+
+                    b.y - 58,
+
+                    3,
+
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+
+            }
+
+
+            /*
+             * Vertical neon strip.
+             */
+
+            if (
+                b.type === 2
+            ) {
+
+                const stripX =
+                    b.x +
+                    b.width * 0.15;
+
+
+                const strip =
+                    ctx.createLinearGradient(
+                        0,
+                        b.y,
+                        0,
+                        H
+                    );
+
+
+                strip.addColorStop(
+                    0,
+                    "rgba(60,255,220,0.7)"
+                );
+
+                strip.addColorStop(
+                    0.5,
+                    "rgba(20,180,180,0.2)"
+                );
+
+                strip.addColorStop(
+                    1,
+                    "rgba(0,0,0,0)"
+                );
+
+
+                ctx.fillStyle =
+                    strip;
+
+
+                ctx.fillRect(
+                    stripX,
+                    b.y,
+                    3,
+                    b.height
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   WINDOWS
+===================================================== */
+
+function drawWindows(time) {
+
+    windows.forEach(
+        function(w) {
+
+            const pulse =
+                (
+                    Math.sin(
+                        time * 1.2 +
+                        w.phase
+                    ) + 1
+                ) / 2;
+
+
+            const alpha =
+                w.brightness *
+                (
+                    0.55 +
+                    pulse * 0.45
+                );
+
+
+            ctx.fillStyle =
+                `rgba(
+                    70,
+                    230,
+                    205,
+                    ${alpha}
+                )`;
+
+
+            ctx.shadowBlur =
+                5;
+
+
+            ctx.shadowColor =
+                "#35d8c0";
+
+
+            ctx.fillRect(
+                w.x,
+                w.y,
+                w.width,
+                w.height
+            );
+
+
+            ctx.shadowBlur = 0;
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   NEON SIGNS
+===================================================== */
+
+function drawSigns(time) {
+
+    neonSigns.forEach(
+        function(s) {
+
+            const pulse =
+                (
+                    Math.sin(
+                        time * 2 +
+                        s.phase
+                    ) + 1
+                ) / 2;
+
+
+            ctx.save();
+
+
+            ctx.translate(
+                s.x,
+                s.y
+            );
+
+
+            ctx.scale(
+                s.scale,
+                s.scale
+            );
+
+
+            ctx.font =
+                "bold 15px Arial";
+
+
+            ctx.textAlign =
+                "center";
+
+
+            ctx.textBaseline =
+                "middle";
+
+
+            ctx.shadowBlur =
+                20 +
+                pulse * 10;
+
+
+            ctx.shadowColor =
+                "#00ffd5";
+
+
+            ctx.fillStyle =
+                `rgba(
+                    80,
+                    255,
+                    225,
+                    ${0.6 +
+                    pulse * 0.4}
+                )`;
+
+
+            ctx.fillText(
+                s.text,
+                0,
+                0
+            );
+
+
+            ctx.shadowBlur = 0;
+
+
+            ctx.restore();
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   STREET
+===================================================== */
+
+function drawStreet(time) {
+
+    const streetTop =
+        H * 0.78;
+
+
+    /*
+     * Street.
+     */
+
+    const street =
+        ctx.createLinearGradient(
+            0,
+            streetTop,
+            0,
+            H
+        );
+
+
+    street.addColorStop(
+        0,
+        "#07181b"
+    );
+
+    street.addColorStop(
+        1,
+        "#020506"
+    );
+
+
+    ctx.fillStyle =
+        street;
+
+
+    ctx.fillRect(
+        0,
+        streetTop,
+        W,
+        H -
+        streetTop
+    );
+
+
+    /*
+     * Road perspective lines.
+     */
+
+    ctx.strokeStyle =
+        "rgba(70,200,190,0.12)";
+
+    ctx.lineWidth = 1;
+
+
+    for (
+        let i = 0;
+        i < 18;
+        i++
+    ) {
+
+        const y =
+            streetTop +
+            i * 12;
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            0,
+            y
+        );
+
+        ctx.lineTo(
+            W,
+            y
+        );
+
+        ctx.stroke();
+
+    }
+
+
+    /*
+     * Neon road reflection.
+     */
+
+    for (
+        let i = 0;
+        i < 18;
+        i++
+    ) {
+
+        const x =
+            random(
+                0,
+                W
+            );
+
+
+        const length =
+            random(
+                30,
+                180
+            );
+
+
+        const gradient =
+            ctx.createLinearGradient(
+                x,
+                streetTop,
+                x,
+                H
+            );
+
+
+        gradient.addColorStop(
+            0,
+            "rgba(60,255,220,0.2)"
+        );
+
+        gradient.addColorStop(
+            1,
+            "rgba(60,255,220,0)"
+        );
+
+
+        ctx.fillStyle =
+            gradient;
+
+
+        ctx.fillRect(
+            x,
+            streetTop,
+            2,
+            length
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   RAIN
+===================================================== */
+
+function drawRain(time) {
+
+    rain.forEach(
+        function(r) {
+
+            r.y +=
+                r.speed;
+
+
+            r.x -=
+                0.7;
+
+
+            if (
+                r.y >
+                H + 30
+            ) {
+
+                r.y =
+                    random(
+                        -H,
+                        -10
+                    );
+
+                r.x =
+                    random(
+                        0,
+                        W
+                    );
+
+            }
+
+
+            if (
+                r.x <
+                -50
+            ) {
+
+                r.x =
+                    W + 50;
+
+            }
+
+
+            /*
+             * Mouse glow.
+             */
+
+            const dx =
+                mouse.x -
+                r.x;
+
+            const dy =
+                mouse.y -
+                r.y;
+
+
+            const distance =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            let alpha =
+                r.alpha;
+
+
+            if (
+                distance <
+                180
+            ) {
+
+                alpha +=
+                    (
+                        1 -
+                        distance / 180
+                    ) *
+                    0.5;
+
+            }
+
+
+            ctx.strokeStyle =
+                `rgba(
+                    90,
+                    245,
+                    220,
+                    ${alpha}
+                )`;
+
+
+            ctx.lineWidth =
+                r.width;
+
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                r.x,
+                r.y
+            );
+
+            ctx.lineTo(
+                r.x - 4,
+                r.y +
+                r.length
+            );
+
+            ctx.stroke();
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   PUDDLE REFLECTION
+===================================================== */
+
+function drawReflection(time) {
+
+    const reflection =
+        ctx.createLinearGradient(
+            0,
+            H * 0.78,
+            0,
+            H
+        );
+
+
+    reflection.addColorStop(
+        0,
+        "rgba(20,180,170,0.02)"
+    );
+
+    reflection.addColorStop(
+        1,
+        "rgba(20,180,170,0.15)"
+    );
+
+
+    ctx.fillStyle =
+        reflection;
+
+
+    ctx.fillRect(
+        0,
+        H * 0.78,
+        W,
+        H * 0.22
+    );
+
+
+    /*
+     * Building reflections.
+     */
+
+    buildings.forEach(
+        function(b) {
+
+            const reflectionHeight =
+                Math.min(
+                    H * 0.22,
+                    b.height *
+                    0.18
+                );
+
+
+            const gradient =
+                ctx.createLinearGradient(
+                    0,
+                    H * 0.78,
+                    0,
+                    H
+                );
+
+
+            gradient.addColorStop(
+                0,
+                "rgba(50,210,190,0.12)"
+            );
+
+            gradient.addColorStop(
+                1,
+                "rgba(50,210,190,0)"
+            );
+
+
+            ctx.fillStyle =
+                gradient;
+
+
+            ctx.fillRect(
+                b.x,
+                H * 0.78,
+                b.width,
+                reflectionHeight
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   FOG
+===================================================== */
+
+function drawFog(time) {
+
+    const fog =
+        ctx.createLinearGradient(
+            0,
+            H * 0.45,
+            0,
+            H
+        );
+
+
+    fog.addColorStop(
+        0,
+        "rgba(10,80,80,0)"
+    );
+
+    fog.addColorStop(
+        0.7,
+        "rgba(10,80,75,0.05)"
+    );
+
+    fog.addColorStop(
+        1,
+        "rgba(10,80,75,0.18)"
+    );
+
+
+    ctx.fillStyle =
+        fog;
+
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =====================================================
+   RIPPLE
+===================================================== */
+
+function drawRipples() {
+
+    for (
+        let i =
+            ripples.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const r =
+            ripples[i];
+
+
+        r.radius +=
+            5;
+
+        r.alpha *=
+            0.95;
+
+
+        ctx.strokeStyle =
+            `rgba(
+                80,
+                255,
+                220,
+                ${r.alpha}
+            )`;
+
+
+        ctx.lineWidth = 2;
+
+
+        ctx.shadowBlur = 15;
+
+        ctx.shadowColor =
+            "#30ffe0";
+
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            r.x,
+            r.y,
+            r.radius,
+            r.radius * 0.25,
+            0,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.stroke();
+
+
+        ctx.shadowBlur = 0;
+
+
+        if (
+            r.alpha <
+            0.03
+        ) {
+
+            ripples.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   MOUSE LIGHT
+===================================================== */
+
+function drawMouseLight() {
+
+    const radius =
+        mouse.down
+            ? 300
+            : 180;
+
+
+    const glow =
+        ctx.createRadialGradient(
+            mouse.x,
+            mouse.y,
+            0,
+            mouse.x,
+            mouse.y,
+            radius
+        );
+
+
+    glow.addColorStop(
+        0,
+        mouse.down
+            ? "rgba(60,255,220,0.2)"
+            : "rgba(60,255,220,0.08)"
+    );
+
+
+    glow.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        glow;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        mouse.x,
+        mouse.y,
+        radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+}
+
+
+/* =====================================================
+   LIGHTNING
+===================================================== */
+
+let lightningTimer =
+    random(
+        5,
+        10
+    );
+
+let lightningAlpha =
+    0;
+
+
+function updateLightning(delta) {
+
+    lightningTimer -=
+        delta;
+
+
+    if (
+        lightningTimer <= 0
+    ) {
+
+        lightningAlpha =
+            0.18;
+
+
+        lightningTimer =
+            random(
+                7,
+                14
+            );
+
+    }
+
+
+    lightningAlpha *=
+        0.88;
+
+
+    if (
+        lightningAlpha >
+        0.01
+    ) {
+
+        ctx.fillStyle =
+            `rgba(
+                160,
+                255,
+                245,
+                ${lightningAlpha}
+            )`;
+
+
+        ctx.fillRect(
+            0,
+            0,
+            W,
+            H
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   VIGNETTE
+===================================================== */
+
+function drawVignette() {
+
+    const vignette =
+        ctx.createRadialGradient(
+            W / 2,
+            H / 2,
+            H * 0.15,
+
+            W / 2,
+            H / 2,
+            Math.max(
+                W,
+                H
+            ) * 0.75
+        );
+
+
+    vignette.addColorStop(
+        0,
+        "rgba(0,0,0,0)"
+    );
+
+    vignette.addColorStop(
+        0.6,
+        "rgba(0,0,0,0.1)"
+    );
+
+    vignette.addColorStop(
+        1,
+        "rgba(0,0,0,0.7)"
+    );
+
+
+    ctx.fillStyle =
+        vignette;
+
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =====================================================
+   ANIMATION
+===================================================== */
+
+let lastTime =
+    performance.now();
+
+
+function animate(timestamp) {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    const delta =
+        (
+            timestamp -
+            lastTime
+        ) / 1000;
+
+
+    lastTime =
+        timestamp;
+
+
+    const time =
+        timestamp / 1000;
+
+
+    /*
+     * Smooth mouse.
+     */
+
+    mouse.x +=
+        (
+            mouse.targetX -
+            mouse.x
+        ) * 0.08;
+
+
+    mouse.y +=
+        (
+            mouse.targetY -
+            mouse.y
+        ) * 0.08;
+
+
+    /*
+     * Draw scene.
+     */
+
+    drawBackground();
+
+    drawSkyLight(
+        time
+    );
+
+    drawBuildings(
+        time
+    );
+
+    drawWindows(
+        time
+    );
+
+    drawSigns(
+        time
+    );
+
+    drawStreet(
+        time
+    );
+
+    drawReflection(
+        time
+    );
+
+    drawRain(
+        time
+    );
+
+    drawFog(
+        time
+    );
+
+    drawMouseLight();
+
+    drawRipples();
+
+    updateLightning(
+        delta
+    );
+
+    drawVignette();
+
+}
+
+
+/* =====================================================
+   START
+===================================================== */
+
+resize();
+
+createSigns();
+
+requestAnimationFrame(
+    animate
+);
+
+</script>
+
+</body>
+</html>

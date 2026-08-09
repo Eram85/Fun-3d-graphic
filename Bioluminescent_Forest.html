@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Bioluminescent Forest</title>
+
+<style>
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+
+    background: #010806;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    touch-action: none;
+}
+
+canvas {
+    position: fixed;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: block;
+}
+
+
+/* =========================================
+   TITLE
+========================================= */
+
+.title {
+
+    position: fixed;
+
+    top: 40px;
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 20;
+
+    color:
+        rgba(180,255,225,0.72);
+
+    font-size: 11px;
+
+    letter-spacing: 9px;
+
+    text-transform: uppercase;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================
+   SUBTITLE
+========================================= */
+
+.subtitle {
+
+    position: fixed;
+
+    top: 67px;
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 20;
+
+    color:
+        rgba(100,230,190,0.28);
+
+    font-size: 8px;
+
+    letter-spacing: 5px;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================
+   BOTTOM TEXT
+========================================= */
+
+.instruction {
+
+    position: fixed;
+
+    bottom: 32px;
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 20;
+
+    color:
+        rgba(170,255,220,0.42);
+
+    font-size: 9px;
+
+    letter-spacing: 5px;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================
+   SIDE INFO
+========================================= */
+
+.left {
+
+    position: fixed;
+
+    left: 28px;
+    bottom: 30px;
+
+    z-index: 20;
+
+    color:
+        rgba(100,230,180,0.22);
+
+    font-size: 8px;
+
+    letter-spacing: 3px;
+
+    pointer-events: none;
+}
+
+
+.right {
+
+    position: fixed;
+
+    right: 28px;
+    bottom: 30px;
+
+    z-index: 20;
+
+    color:
+        rgba(100,230,180,0.22);
+
+    font-size: 8px;
+
+    letter-spacing: 3px;
+
+    pointer-events: none;
+}
+
+
+@media(max-width:700px) {
+
+    .title {
+
+        top: 25px;
+
+        font-size: 8px;
+
+        letter-spacing: 6px;
+
+    }
+
+    .subtitle {
+
+        top: 49px;
+
+    }
+
+    .instruction {
+
+        bottom: 23px;
+
+        font-size: 7px;
+
+        letter-spacing: 3px;
+
+    }
+
+    .left,
+    .right {
+
+        display: none;
+
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+
+<div class="title">
+    BIOLUMINESCENT FOREST
+</div>
+
+
+<div class="subtitle">
+    ENTER THE LIVING NIGHT
+</div>
+
+
+<div class="left">
+    FOREST // 07
+</div>
+
+
+<div class="right">
+    LIFE // GLOWING
+</div>
+
+
+<div class="instruction">
+    MOVE • TOUCH • DISCOVER
+</div>
+
+
+<canvas id="canvas"></canvas>
+
+
+<script>
+
+/* =====================================================
+   CANVAS
+===================================================== */
+
+const canvas =
+    document.getElementById("canvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+let W =
+    window.innerWidth;
+
+let H =
+    window.innerHeight;
+
+let DPR =
+    Math.min(
+        window.devicePixelRatio || 1,
+        2
+    );
+
+
+function resize() {
+
+    W =
+        window.innerWidth;
+
+    H =
+        window.innerHeight;
+
+    DPR =
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
+
+    canvas.width =
+        W * DPR;
+
+    canvas.height =
+        H * DPR;
+
+    canvas.style.width =
+        W + "px";
+
+    canvas.style.height =
+        H + "px";
+
+    ctx.setTransform(
+        DPR,
+        0,
+        0,
+        DPR,
+        0,
+        0
+    );
+
+    createTrees();
+
+    createMushrooms();
+
+    createFireflies();
+
+    createStars();
+
+    createPlants();
+
+}
+
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+
+/* =====================================================
+   POINTER
+===================================================== */
+
+const pointer = {
+
+    x: W / 2,
+
+    y: H / 2,
+
+    targetX: W / 2,
+
+    targetY: H / 2,
+
+    down: false
+
+};
+
+
+window.addEventListener(
+    "pointermove",
+    e => {
+
+        pointer.targetX =
+            e.clientX;
+
+        pointer.targetY =
+            e.clientY;
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerdown",
+    e => {
+
+        pointer.down =
+            true;
+
+        pointer.targetX =
+            e.clientX;
+
+        pointer.targetY =
+            e.clientY;
+
+        createPulse(
+            e.clientX,
+            e.clientY
+        );
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerup",
+    () => {
+
+        pointer.down =
+            false;
+
+    }
+);
+
+
+/* =====================================================
+   RANDOM
+===================================================== */
+
+function random(min, max) {
+
+    return Math.random() *
+        (max - min) + min;
+
+}
+
+
+/* =====================================================
+   STARS
+===================================================== */
+
+let stars = [];
+
+
+function createStars() {
+
+    stars = [];
+
+    for (
+        let i = 0;
+        i < 180;
+        i++
+    ) {
+
+        stars.push({
+
+            x:
+                random(
+                    0,
+                    W
+                ),
+
+            y:
+                random(
+                    0,
+                    H * 0.48
+                ),
+
+            size:
+                random(
+                    0.3,
+                    1.7
+                ),
+
+            alpha:
+                random(
+                    0.2,
+                    0.9
+                ),
+
+            phase:
+                random(
+                    0,
+                    Math.PI * 2
+                )
+
+        });
+
+    }
+
+}
+
+
+/* =====================================================
+   TREES
+===================================================== */
+
+let trees = [];
+
+
+function createTrees() {
+
+    trees = [];
+
+    /*
+     * Background trees
+     */
+
+    for (
+        let i = 0;
+        i < 35;
+        i++
+    ) {
+
+        trees.push({
+
+            x:
+                random(
+                    -100,
+                    W + 100
+                ),
+
+            height:
+                random(
+                    H * 0.25,
+                    H * 0.52
+                ),
+
+            width:
+                random(
+                    50,
+                    110
+                ),
+
+            depth:
+                random(
+                    0.2,
+                    0.5
+                ),
+
+            side:
+                random(
+                    -1,
+                    1
+                )
+
+        });
+
+    }
+
+
+    /*
+     * Foreground trees
+     */
+
+    for (
+        let i = 0;
+        i < 18;
+        i++
+    ) {
+
+        trees.push({
+
+            x:
+                random(
+                    -100,
+                    W + 100
+                ),
+
+            height:
+                random(
+                    H * 0.45,
+                    H * 0.85
+                ),
+
+            width:
+                random(
+                    80,
+                    180
+                ),
+
+            depth:
+                random(
+                    0.7,
+                    1
+                ),
+
+            side:
+                random(
+                    -1,
+                    1
+                )
+
+        });
+
+    }
+
+}
+
+
+/* =====================================================
+   MUSHROOMS
+===================================================== */
+
+let mushrooms = [];
+
+
+function createMushrooms() {
+
+    mushrooms = [];
+
+    for (
+        let i = 0;
+        i < 65;
+        i++
+    ) {
+
+        mushrooms.push({
+
+            x:
+                random(
+                    0,
+                    W
+                ),
+
+            y:
+                random(
+                    H * 0.69,
+                    H * 0.94
+                ),
+
+            size:
+                random(
+                    5,
+                    18
+                ),
+
+            phase:
+                random(
+                    0,
+                    Math.PI * 2
+                ),
+
+            color:
+                Math.random() < 0.5
+                    ? "cyan"
+                    : "green"
+
+        });
+
+    }
+
+}
+
+
+/* =====================================================
+   PLANTS
+===================================================== */
+
+let plants = [];
+
+
+function createPlants() {
+
+    plants = [];
+
+    for (
+        let i = 0;
+        i < 100;
+        i++
+    ) {
+
+        plants.push({
+
+            x:
+                random(
+                    0,
+                    W
+                ),
+
+            y:
+                random(
+                    H * 0.76,
+                    H
+                ),
+
+            height:
+                random(
+                    15,
+                    65
+                ),
+
+            phase:
+                random(
+                    0,
+                    Math.PI * 2
+                ),
+
+            width:
+                random(
+                    1,
+                    3
+                )
+
+        });
+
+    }
+
+}
+
+
+/* =====================================================
+   FIREFLIES
+===================================================== */
+
+let fireflies = [];
+
+
+function createFireflies() {
+
+    fireflies = [];
+
+    for (
+        let i = 0;
+        i < 250;
+        i++
+    ) {
+
+        fireflies.push({
+
+            x:
+                random(
+                    0,
+                    W
+                ),
+
+            y:
+                random(
+                    H * 0.25,
+                    H * 0.9
+                ),
+
+            vx:
+                random(
+                    -0.3,
+                    0.3
+                ),
+
+            vy:
+                random(
+                    -0.25,
+                    0.25
+                ),
+
+            size:
+                random(
+                    1,
+                    3
+                ),
+
+            brightness:
+                random(
+                    0.3,
+                    1
+                ),
+
+            phase:
+                random(
+                    0,
+                    Math.PI * 2
+                )
+
+        });
+
+    }
+
+}
+
+
+/* =====================================================
+   PULSES
+===================================================== */
+
+let pulses = [];
+
+
+function createPulse(x, y) {
+
+    pulses.push({
+
+        x: x,
+
+        y: y,
+
+        radius: 5,
+
+        alpha: 1
+
+    });
+
+
+    /*
+     * Make nearby fireflies scatter.
+     */
+
+    fireflies.forEach(
+        f => {
+
+            const dx =
+                f.x - x;
+
+            const dy =
+                f.y - y;
+
+            const distance =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            if (
+                distance < 220
+            ) {
+
+                const force =
+                    (
+                        1 -
+                        distance / 220
+                    ) * 2;
+
+
+                f.vx +=
+                    dx /
+                    (distance || 1) *
+                    force;
+
+                f.vy +=
+                    dy /
+                    (distance || 1) *
+                    force;
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   BACKGROUND
+===================================================== */
+
+function drawBackground() {
+
+    const gradient =
+        ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            H
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "#020914"
+    );
+
+    gradient.addColorStop(
+        0.35,
+        "#031b1c"
+    );
+
+    gradient.addColorStop(
+        0.65,
+        "#05291f"
+    );
+
+    gradient.addColorStop(
+        1,
+        "#020807"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =====================================================
+   MOON
+===================================================== */
+
+function drawMoon() {
+
+    const moonX =
+        W * 0.78;
+
+    const moonY =
+        H * 0.18;
+
+
+    const glow =
+        ctx.createRadialGradient(
+            moonX,
+            moonY,
+            10,
+            moonX,
+            moonY,
+            180
+        );
+
+
+    glow.addColorStop(
+        0,
+        "rgba(130,255,220,0.18)"
+    );
+
+    glow.addColorStop(
+        0.3,
+        "rgba(80,220,190,0.07)"
+    );
+
+    glow.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        glow;
+
+
+    ctx.fillRect(
+        moonX - 180,
+        moonY - 180,
+        360,
+        360
+    );
+
+
+    ctx.fillStyle =
+        "rgba(200,255,235,0.78)";
+
+    ctx.shadowBlur =
+        35;
+
+    ctx.shadowColor =
+        "#9affdf";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        moonX,
+        moonY,
+        32,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.shadowBlur = 0;
+
+}
+
+
+/* =====================================================
+   STARS
+===================================================== */
+
+function drawStars(time) {
+
+    stars.forEach(
+        star => {
+
+            const pulse =
+                (
+                    Math.sin(
+                        time * 1.5 +
+                        star.phase
+                    ) + 1
+                ) / 2;
+
+
+            ctx.fillStyle =
+                `rgba(
+                    160,
+                    255,
+                    225,
+                    ${star.alpha *
+                    (0.5 + pulse * 0.5)}
+                )`;
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+                star.x,
+                star.y,
+                star.size,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   TREE DRAWING
+===================================================== */
+
+function drawTree(
+    tree,
+    time
+) {
+
+    const sway =
+        Math.sin(
+            time * 0.7 +
+            tree.x * 0.01
+        ) *
+        tree.depth *
+        5;
+
+
+    const baseY =
+        H;
+
+
+    const topY =
+        H -
+        tree.height;
+
+
+    /*
+     * Trunk
+     */
+
+    ctx.strokeStyle =
+        `rgba(
+            5,
+            25,
+            22,
+            ${0.75 + tree.depth * 0.2}
+        )`;
+
+
+    ctx.lineWidth =
+        tree.width *
+        0.12;
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        tree.x,
+        baseY
+    );
+
+    ctx.quadraticCurveTo(
+        tree.x + sway,
+        H * 0.55,
+        tree.x + sway * 0.5,
+        topY
+    );
+
+    ctx.stroke();
+
+
+    /*
+     * Main branches
+     */
+
+    ctx.lineWidth =
+        Math.max(
+            2,
+            tree.width * 0.025
+        );
+
+
+    for (
+        let i = 0;
+        i < 5;
+        i++
+    ) {
+
+        const branchY =
+            topY +
+            tree.height *
+            (0.25 + i * 0.13);
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            tree.x +
+            sway * 0.5,
+            branchY
+        );
+
+        ctx.lineTo(
+            tree.x -
+            tree.width *
+            (0.3 + i * 0.04),
+            branchY -
+            tree.height * 0.12
+        );
+
+        ctx.stroke();
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            tree.x +
+            sway * 0.5,
+            branchY
+        );
+
+        ctx.lineTo(
+            tree.x +
+            tree.width *
+            (0.3 + i * 0.04),
+            branchY -
+            tree.height * 0.12
+        );
+
+        ctx.stroke();
+
+    }
+
+
+    /*
+     * Tree canopy.
+     */
+
+    for (
+        let i = 0;
+        i < 7;
+        i++
+    ) {
+
+        const cx =
+            tree.x +
+            sway * 0.5 +
+            Math.sin(i * 3.1) *
+            tree.width *
+            0.3;
+
+
+        const cy =
+            topY +
+            tree.height *
+            (
+                0.15 +
+                i * 0.08
+            );
+
+
+        const radius =
+            tree.width *
+            (
+                0.3 +
+                tree.depth * 0.15
+            );
+
+
+        const canopy =
+            ctx.createRadialGradient(
+                cx,
+                cy,
+                2,
+                cx,
+                cy,
+                radius
+            );
+
+
+        canopy.addColorStop(
+            0,
+            `rgba(
+                8,
+                70,
+                53,
+                ${0.45 + tree.depth * 0.2}
+            )`
+        );
+
+
+        canopy.addColorStop(
+            1,
+            "rgba(1,15,12,0)"
+        );
+
+
+        ctx.fillStyle =
+            canopy;
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            cx,
+            cy,
+            radius,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+    }
+
+}
+
+
+/* =====================================================
+   TREES
+===================================================== */
+
+function drawTrees(time) {
+
+    trees.sort(
+        (a, b) =>
+            a.depth -
+            b.depth
+    );
+
+
+    trees.forEach(
+        tree =>
+            drawTree(
+                tree,
+                time
+            )
+    );
+
+}
+
+
+/* =====================================================
+   GLOWING PLANTS
+===================================================== */
+
+function drawPlants(time) {
+
+    plants.forEach(
+        plant => {
+
+            const sway =
+                Math.sin(
+                    time * 1.2 +
+                    plant.phase
+                ) *
+                7;
+
+
+            /*
+             * Stem
+             */
+
+            ctx.strokeStyle =
+                "rgba(40,190,135,0.55)";
+
+            ctx.lineWidth =
+                plant.width;
+
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                plant.x,
+                plant.y
+            );
+
+            ctx.quadraticCurveTo(
+
+                plant.x +
+                sway,
+
+                plant.y -
+                plant.height * 0.5,
+
+                plant.x +
+                sway * 0.4,
+
+                plant.y -
+                plant.height
+
+            );
+
+            ctx.stroke();
+
+
+            /*
+             * Glowing tip
+             */
+
+            const glow =
+                ctx.createRadialGradient(
+                    plant.x +
+                    sway * 0.4,
+
+                    plant.y -
+                    plant.height,
+
+                    0,
+
+                    plant.x +
+                    sway * 0.4,
+
+                    plant.y -
+                    plant.height,
+
+                    15
+                );
+
+
+            glow.addColorStop(
+                0,
+                "rgba(100,255,200,0.8)"
+            );
+
+            glow.addColorStop(
+                1,
+                "rgba(40,220,160,0)"
+            );
+
+
+            ctx.fillStyle =
+                glow;
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+                plant.x +
+                sway * 0.4,
+
+                plant.y -
+                plant.height,
+
+                15,
+
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   MUSHROOMS
+===================================================== */
+
+function drawMushrooms(time) {
+
+    mushrooms.forEach(
+        mushroom => {
+
+            const dx =
+                pointer.x -
+                mushroom.x;
+
+            const dy =
+                pointer.y -
+                mushroom.y;
+
+            const distance =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            let intensity =
+                0.6;
+
+
+            /*
+             * Mouse makes mushroom glow.
+             */
+
+            if (
+                distance < 180
+            ) {
+
+                intensity +=
+                    (
+                        1 -
+                        distance / 180
+                    ) *
+                    1.4;
+
+            }
+
+
+            const pulse =
+                (
+                    Math.sin(
+                        time * 2 +
+                        mushroom.phase
+                    ) + 1
+                ) / 2;
+
+
+            intensity +=
+                pulse * 0.3;
+
+
+            let color;
+
+
+            if (
+                mushroom.color ===
+                "cyan"
+            ) {
+
+                color =
+                    `rgba(
+                        50,
+                        255,
+                        225,
+                        ${intensity}
+                    )`;
+
+            } else {
+
+                color =
+                    `rgba(
+                        80,
+                        255,
+                        140,
+                        ${intensity}
+                    )`;
+
+            }
+
+
+            /*
+             * Glow.
+             */
+
+            ctx.shadowBlur =
+                25;
+
+            ctx.shadowColor =
+                mushroom.color ===
+                "cyan"
+                    ? "#30ffe0"
+                    : "#50ff90";
+
+
+            /*
+             * Stem.
+             */
+
+            ctx.strokeStyle =
+                color;
+
+            ctx.lineWidth =
+                Math.max(
+                    1.5,
+                    mushroom.size * 0.15
+                );
+
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                mushroom.x,
+                mushroom.y
+            );
+
+            ctx.lineTo(
+                mushroom.x,
+                mushroom.y -
+                mushroom.size
+            );
+
+            ctx.stroke();
+
+
+            /*
+             * Mushroom cap.
+             */
+
+            ctx.fillStyle =
+                color;
+
+
+            ctx.beginPath();
+
+            ctx.ellipse(
+                mushroom.x,
+                mushroom.y -
+                mushroom.size,
+
+                mushroom.size,
+
+                mushroom.size *
+                0.45,
+
+                0,
+
+                Math.PI,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            ctx.shadowBlur = 0;
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   FIREFLIES
+===================================================== */
+
+function drawFireflies(time) {
+
+    fireflies.forEach(
+        f => {
+
+            f.x +=
+                f.vx;
+
+            f.y +=
+                f.vy;
+
+
+            /*
+             * Natural movement.
+             */
+
+            f.vx +=
+                Math.sin(
+                    time * 0.5 +
+                    f.phase
+                ) *
+                0.002;
+
+
+            f.vy +=
+                Math.cos(
+                    time * 0.4 +
+                    f.phase
+                ) *
+                0.002;
+
+
+            f.vx *=
+                0.995;
+
+            f.vy *=
+                0.995;
+
+
+            /*
+             * Wrap around.
+             */
+
+            if (
+                f.x < -20
+            )
+                f.x = W + 20;
+
+            if (
+                f.x > W + 20
+            )
+                f.x = -20;
+
+            if (
+                f.y < H * 0.2
+            )
+                f.y = H * 0.85;
+
+            if (
+                f.y > H
+            )
+                f.y = H * 0.2;
+
+
+            /*
+             * Glow intensity.
+             */
+
+            const pulse =
+                (
+                    Math.sin(
+                        time * 2.5 +
+                        f.phase
+                    ) + 1
+                ) / 2;
+
+
+            const alpha =
+                f.brightness *
+                (
+                    0.25 +
+                    pulse * 0.75
+                );
+
+
+            ctx.shadowBlur =
+                18;
+
+            ctx.shadowColor =
+                "#6affc5";
+
+
+            ctx.fillStyle =
+                `rgba(
+                    100,
+                    255,
+                    190,
+                    ${alpha}
+                )`;
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+                f.x,
+                f.y,
+                f.size *
+                (
+                    0.7 +
+                    pulse * 0.6
+                ),
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            ctx.shadowBlur = 0;
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   MOUSE GLOW
+===================================================== */
+
+function drawPointerGlow() {
+
+    const radius =
+        pointer.down
+            ? 300
+            : 200;
+
+
+    const glow =
+        ctx.createRadialGradient(
+
+            pointer.x,
+            pointer.y,
+            0,
+
+            pointer.x,
+            pointer.y,
+            radius
+
+        );
+
+
+    glow.addColorStop(
+        0,
+        pointer.down
+            ? "rgba(80,255,210,0.22)"
+            : "rgba(80,255,210,0.10)"
+    );
+
+
+    glow.addColorStop(
+        0.3,
+        "rgba(60,220,180,0.04)"
+    );
+
+
+    glow.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        glow;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        pointer.x,
+        pointer.y,
+        radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    /*
+     * Cursor glow.
+     */
+
+    ctx.fillStyle =
+        "rgba(160,255,220,0.8)";
+
+    ctx.shadowBlur =
+        20;
+
+    ctx.shadowColor =
+        "#50ffd0";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        pointer.x,
+        pointer.y,
+        2,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.shadowBlur = 0;
+
+}
+
+
+/* =====================================================
+   PULSES
+===================================================== */
+
+function drawPulses() {
+
+    for (
+        let i =
+            pulses.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const p =
+            pulses[i];
+
+
+        p.radius +=
+            6;
+
+        p.alpha *=
+            0.95;
+
+
+        ctx.strokeStyle =
+            `rgba(
+                80,
+                255,
+                210,
+                ${p.alpha}
+            )`;
+
+
+        ctx.lineWidth = 2;
+
+        ctx.shadowBlur =
+            20;
+
+        ctx.shadowColor =
+            "#40ffd0";
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            p.radius,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.stroke();
+
+
+        ctx.shadowBlur = 0;
+
+
+        if (
+            p.alpha <
+            0.02
+        ) {
+
+            pulses.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   FOG
+===================================================== */
+
+function drawFog(time) {
+
+    for (
+        let i = 0;
+        i < 5;
+        i++
+    ) {
+
+        const x =
+            W / 2 +
+            Math.sin(
+                time * 0.08 +
+                i
+            ) *
+            W *
+            0.3;
+
+
+        const y =
+            H *
+            (
+                0.5 +
+                i * 0.08
+            );
+
+
+        const fog =
+            ctx.createRadialGradient(
+                x,
+                y,
+                10,
+                x,
+                y,
+                W * 0.45
+            );
+
+
+        fog.addColorStop(
+            0,
+            "rgba(80,255,190,0.025)"
+        );
+
+        fog.addColorStop(
+            1,
+            "rgba(0,0,0,0)"
+        );
+
+
+        ctx.fillStyle =
+            fog;
+
+
+        ctx.fillRect(
+            0,
+            y - 150,
+            W,
+            300
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   GROUND
+===================================================== */
+
+function drawGround() {
+
+    const ground =
+        ctx.createLinearGradient(
+            0,
+            H * 0.78,
+            0,
+            H
+        );
+
+
+    ground.addColorStop(
+        0,
+        "rgba(10,90,55,0.05)"
+    );
+
+    ground.addColorStop(
+        1,
+        "rgba(1,12,7,0.8)"
+    );
+
+
+    ctx.fillStyle =
+        ground;
+
+
+    ctx.fillRect(
+        0,
+        H * 0.76,
+        W,
+        H * 0.24
+    );
+
+}
+
+
+/* =====================================================
+   VIGNETTE
+===================================================== */
+
+function drawVignette() {
+
+    const gradient =
+        ctx.createRadialGradient(
+
+            W / 2,
+            H / 2,
+            H * 0.15,
+
+            W / 2,
+            H / 2,
+            Math.max(
+                W,
+                H
+            ) * 0.75
+
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "rgba(0,0,0,0)"
+    );
+
+
+    gradient.addColorStop(
+        0.65,
+        "rgba(0,0,0,0.08)"
+    );
+
+
+    gradient.addColorStop(
+        1,
+        "rgba(0,0,0,0.72)"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =====================================================
+   ANIMATION
+===================================================== */
+
+let lastTime =
+    performance.now();
+
+
+function animate(timeStamp) {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    const time =
+        timeStamp / 1000;
+
+
+    /*
+     * Smooth pointer.
+     */
+
+    pointer.x +=
+        (
+            pointer.targetX -
+            pointer.x
+        ) * 0.08;
+
+
+    pointer.y +=
+        (
+            pointer.targetY -
+            pointer.y
+        ) * 0.08;
+
+
+    /*
+     * Scene.
+     */
+
+    drawBackground();
+
+    drawMoon();
+
+    drawStars(
+        time
+    );
+
+    drawTrees(
+        time
+    );
+
+    drawGround();
+
+    drawPlants(
+        time
+    );
+
+    drawMushrooms(
+        time
+    );
+
+    drawFireflies(
+        time
+    );
+
+    drawFog(
+        time
+    );
+
+    drawPointerGlow();
+
+    drawPulses();
+
+    drawVignette();
+
+}
+
+
+/* =====================================================
+   START
+===================================================== */
+
+resize();
+
+requestAnimationFrame(
+    animate
+);
+
+</script>
+
+</body>
+</html>
