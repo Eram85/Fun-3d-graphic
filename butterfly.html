@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               maximum-scale=1.0,
+               user-scalable=no">
+
+<title>Midnight Butterfly Garden</title>
+
+<style>
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            circle at 50% 40%,
+            #071b32 0%,
+            #020713 45%,
+            #000108 100%
+        );
+
+    touch-action: none;
+}
+
+canvas {
+    position: fixed;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: block;
+}
+
+.title {
+
+    position: fixed;
+
+    top: 42px;
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 10;
+
+    color:
+        rgba(210,230,255,.7);
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 11px;
+
+    letter-spacing: 8px;
+
+    text-transform:
+        uppercase;
+
+    pointer-events:
+        none;
+}
+
+.subtitle {
+
+    position: fixed;
+
+    bottom: 32px;
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 10;
+
+    color:
+        rgba(150,190,230,.45);
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 9px;
+
+    letter-spacing: 4px;
+
+    text-transform:
+        uppercase;
+
+    pointer-events:
+        none;
+
+    transition:
+        opacity 1s ease;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="title">
+    MIDNIGHT GARDEN
+</div>
+
+<div class="subtitle" id="hint">
+    TOUCH THE LIGHT
+</div>
+
+<canvas id="canvas"></canvas>
+
+
+<script>
+
+/* =========================================================
+   CANVAS
+========================================================= */
+
+const canvas =
+    document.getElementById(
+        "canvas"
+    );
+
+const ctx =
+    canvas.getContext(
+        "2d"
+    );
+
+
+let W;
+let H;
+let DPR;
+
+
+function resize() {
+
+    DPR =
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
+
+    W =
+        window.innerWidth;
+
+    H =
+        window.innerHeight;
+
+    canvas.width =
+        W * DPR;
+
+    canvas.height =
+        H * DPR;
+
+    canvas.style.width =
+        W + "px";
+
+    canvas.style.height =
+        H + "px";
+
+    ctx.setTransform(
+        DPR,
+        0,
+        0,
+        DPR,
+        0,
+        0
+    );
+}
+
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+resize();
+
+
+/* =========================================================
+   UTILITIES
+========================================================= */
+
+function random(
+    min,
+    max
+) {
+
+    return (
+        Math.random() *
+        (max - min)
+    ) + min;
+}
+
+
+function distance(
+    a,
+    b
+) {
+
+    const dx =
+        a.x - b.x;
+
+    const dy =
+        a.y - b.y;
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy
+    );
+}
+
+
+function clamp(
+    value,
+    min,
+    max
+) {
+
+    return Math.max(
+        min,
+        Math.min(
+            max,
+            value
+        )
+    );
+}
+
+
+/* =========================================================
+   POINTER
+========================================================= */
+
+const pointer = {
+
+    x: W / 2,
+
+    y: H / 2,
+
+    targetX: W / 2,
+
+    targetY: H / 2,
+
+    active: false,
+
+    down: false
+
+};
+
+
+window.addEventListener(
+    "pointermove",
+    e => {
+
+        pointer.targetX =
+            e.clientX;
+
+        pointer.targetY =
+            e.clientY;
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerdown",
+    e => {
+
+        pointer.down =
+            true;
+
+        pointer.active =
+            true;
+
+        pointer.targetX =
+            e.clientX;
+
+        pointer.targetY =
+            e.clientY;
+
+        createShockwave(
+            e.clientX,
+            e.clientY
+        );
+
+        document
+            .getElementById(
+                "hint"
+            )
+            .style.opacity =
+            "0";
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerup",
+    () => {
+
+        pointer.down =
+            false;
+
+    }
+);
+
+
+/* =========================================================
+   PARTICLES
+========================================================= */
+
+const particles = [];
+
+
+for (
+    let i = 0;
+    i < 900;
+    i++
+) {
+
+    particles.push({
+
+        x:
+            random(0,W),
+
+        y:
+            random(0,H),
+
+        size:
+            random(.3,1.8),
+
+        speed:
+            random(.05,.35),
+
+        drift:
+            random(-.15,.15),
+
+        alpha:
+            random(.15,.8),
+
+        phase:
+            random(0,Math.PI*2)
+
+    });
+
+}
+
+
+/* =========================================================
+   FLOWERS
+========================================================= */
+
+const flowers = [];
+
+
+const flowerCount =
+    Math.floor(
+        W / 45
+    );
+
+
+for (
+    let i = 0;
+    i < flowerCount;
+    i++
+) {
+
+    flowers.push({
+
+        x:
+            random(
+                -50,
+                W + 50
+            ),
+
+        y:
+            random(
+                H * .68,
+                H + 20
+            ),
+
+        size:
+            random(
+                8,
+                20
+            ),
+
+        glow:
+            0,
+
+        phase:
+            random(
+                0,
+                Math.PI * 2
+            ),
+
+        color:
+            Math.random() >
+            .5
+                ? "#4c8cff"
+                : "#a46cff"
+
+    });
+
+}
+
+
+/* =========================================================
+   SHOCKWAVES
+========================================================= */
+
+const shockwaves = [];
+
+
+function createShockwave(
+    x,
+    y
+) {
+
+    shockwaves.push({
+
+        x,
+        y,
+
+        radius:
+            5,
+
+        alpha:
+            1
+
+    });
+
+}
+
+
+/* =========================================================
+   BUTTERFLY CLASS
+========================================================= */
+
+class Butterfly {
+
+    constructor() {
+
+        this.reset();
+
+    }
+
+
+    reset() {
+
+        this.x =
+            random(
+                -100,
+                W + 100
+            );
+
+        this.y =
+            random(
+                H * .15,
+                H * .78
+            );
+
+
+        this.baseX =
+            this.x;
+
+        this.baseY =
+            this.y;
+
+
+        this.vx =
+            random(
+                -.4,
+                .4
+            );
+
+        this.vy =
+            random(
+                -.35,
+                .35
+            );
+
+
+        this.angle =
+            random(
+                0,
+                Math.PI * 2
+            );
+
+
+        this.size =
+            random(
+                9,
+                22
+            );
+
+
+        this.phase =
+            random(
+                0,
+                Math.PI * 2
+            );
+
+
+        this.speed =
+            random(
+                .5,
+                1.4
+            );
+
+
+        this.wingSpeed =
+            random(
+                5,
+                9
+            );
+
+
+        this.color =
+            Math.random();
+
+
+        this.alpha =
+            random(
+                .55,
+                1
+            );
+
+
+        this.targetX =
+            this.x;
+
+        this.targetY =
+            this.y;
+
+
+        this.energy =
+            0;
+
+    }
+
+
+    update(
+        time
+    ) {
+
+        /* ---------------------------------------------
+           NATURAL FLIGHT
+        --------------------------------------------- */
+
+        const naturalX =
+            Math.sin(
+                time *
+                .35 *
+                this.speed +
+                this.phase
+            ) *
+            .8;
+
+
+        const naturalY =
+            Math.cos(
+                time *
+                .5 *
+                this.speed +
+                this.phase
+            ) *
+            .55;
+
+
+        this.vx +=
+            naturalX *
+            .004;
+
+
+        this.vy +=
+            naturalY *
+            .004;
+
+
+        /* ---------------------------------------------
+           POINTER INTERACTION
+        --------------------------------------------- */
+
+        const dx =
+            this.x -
+            pointer.x;
+
+
+        const dy =
+            this.y -
+            pointer.y;
+
+
+        const dist =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+
+        const interactionRadius =
+            220;
+
+
+        if (
+            dist <
+            interactionRadius
+        ) {
+
+            const force =
+                (
+                    1 -
+                    dist /
+                    interactionRadius
+                );
+
+
+            /*
+             * If touching:
+             * butterflies fly away.
+             */
+
+            if (
+                pointer.down
+            ) {
+
+                this.vx +=
+                    (
+                        dx /
+                        (dist + 1)
+                    ) *
+                    force *
+                    .18;
+
+
+                this.vy +=
+                    (
+                        dy /
+                        (dist + 1)
+                    ) *
+                    force *
+                    .18;
+
+
+                this.energy =
+                    Math.min(
+                        1,
+                        this.energy +
+                        .05
+                    );
+
+            }
+
+            /*
+             * If cursor is close but
+             * not pressed:
+             *
+             * butterflies are attracted.
+             */
+
+            else {
+
+                this.vx +=
+                    (
+                        -dx /
+                        (dist + 1)
+                    ) *
+                    force *
+                    .012;
+
+
+                this.vy +=
+                    (
+                        -dy /
+                        (dist + 1)
+                    ) *
+                    force *
+                    .012;
+
+            }
+
+        }
+
+
+        /* ---------------------------------------------
+           SHOCKWAVE REACTION
+        --------------------------------------------- */
+
+        shockwaves.forEach(
+            wave => {
+
+                const dx =
+                    this.x -
+                    wave.x;
+
+                const dy =
+                    this.y -
+                    wave.y;
+
+                const dist =
+                    Math.sqrt(
+                        dx * dx +
+                        dy * dy
+                    );
+
+
+                if (
+                    Math.abs(
+                        dist -
+                        wave.radius
+                    ) < 80
+                ) {
+
+                    const force =
+                        .08;
+
+
+                    this.vx +=
+                        (
+                            dx /
+                            (dist + 1)
+                        ) *
+                        force;
+
+
+                    this.vy +=
+                        (
+                            dy /
+                            (dist + 1)
+                        ) *
+                        force;
+
+
+                    this.energy =
+                        Math.min(
+                            1,
+                            this.energy +
+                            .08
+                        );
+
+                }
+
+            }
+        );
+
+
+        /* ---------------------------------------------
+           RANDOM WANDER
+        --------------------------------------------- */
+
+        this.vx +=
+            Math.sin(
+                time * .7 +
+                this.phase
+            ) *
+            .002;
+
+
+        this.vy +=
+            Math.cos(
+                time * .6 +
+                this.phase
+            ) *
+            .002;
+
+
+        /* ---------------------------------------------
+           SPEED LIMIT
+        --------------------------------------------- */
+
+        const maxSpeed =
+            1.5 +
+            this.energy *
+            2;
+
+
+        const speed =
+            Math.sqrt(
+                this.vx *
+                this.vx +
+
+                this.vy *
+                this.vy
+            );
+
+
+        if (
+            speed >
+            maxSpeed
+        ) {
+
+            this.vx =
+                (
+                    this.vx /
+                    speed
+                ) *
+                maxSpeed;
+
+
+            this.vy =
+                (
+                    this.vy /
+                    speed
+                ) *
+                maxSpeed;
+
+        }
+
+
+        /* ---------------------------------------------
+           FRICTION
+        --------------------------------------------- */
+
+        this.vx *=
+            .985;
+
+        this.vy *=
+            .985;
+
+
+        this.x +=
+            this.vx;
+
+        this.y +=
+            this.vy;
+
+
+        /* ---------------------------------------------
+           BOUNDARIES
+        --------------------------------------------- */
+
+        const margin =
+            120;
+
+
+        if (
+            this.x <
+            -margin
+        ) {
+
+            this.x =
+                W + margin;
+
+        }
+
+
+        if (
+            this.x >
+            W + margin
+        ) {
+
+            this.x =
+                -margin;
+
+        }
+
+
+        if (
+            this.y <
+            60
+        ) {
+
+            this.vy +=
+                .01;
+
+        }
+
+
+        if (
+            this.y >
+            H * .82
+        ) {
+
+            this.vy -=
+                .01;
+
+        }
+
+
+        /* ---------------------------------------------
+           ROTATION
+        --------------------------------------------- */
+
+        this.angle =
+            Math.atan2(
+                this.vy,
+                this.vx
+            );
+
+
+        /* ---------------------------------------------
+           ENERGY DECAY
+        --------------------------------------------- */
+
+        this.energy *=
+            .97;
+
+    }
+
+
+    draw(
+        time
+    ) {
+
+        ctx.save();
+
+
+        ctx.translate(
+            this.x,
+            this.y
+        );
+
+
+        ctx.rotate(
+            this.angle
+        );
+
+
+        /*
+         * Wing animation.
+         */
+
+        const wing =
+            Math.sin(
+                time *
+                this.wingSpeed +
+                this.phase
+            );
+
+
+        const flap =
+            Math.abs(
+                wing
+            );
+
+
+        /*
+         * Colors.
+         */
+
+        let c1;
+        let c2;
+
+
+        if (
+            this.color <
+            .33
+        ) {
+
+            c1 =
+                "30,120,255";
+
+            c2 =
+                "80,220,255";
+
+        }
+
+        else if (
+            this.color <
+            .66
+        ) {
+
+            c1 =
+                "110,70,255";
+
+            c2 =
+                "200,100,255";
+
+        }
+
+        else {
+
+            c1 =
+                "30,200,190";
+
+            c2 =
+                "80,255,220";
+
+        }
+
+
+        /* ---------------------------------------------
+           GLOW
+        --------------------------------------------- */
+
+        const glowSize =
+            this.size *
+            (
+                3 +
+                this.energy *
+                3
+            );
+
+
+        const gradient =
+            ctx.createRadialGradient(
+                0,
+                0,
+                0,
+                0,
+                0,
+                glowSize
+            );
+
+
+        gradient.addColorStop(
+            0,
+            `rgba(${c2},.35)`
+        );
+
+
+        gradient.addColorStop(
+            .35,
+            `rgba(${c1},.12)`
+        );
+
+
+        gradient.addColorStop(
+            1,
+            `rgba(${c1},0)`
+        );
+
+
+        ctx.fillStyle =
+            gradient;
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            0,
+            0,
+            glowSize,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+
+        /* ---------------------------------------------
+           LEFT WING
+        --------------------------------------------- */
+
+        ctx.save();
+
+
+        ctx.scale(
+            1,
+            .35 +
+            flap * .75
+        );
+
+
+        const leftGradient =
+            ctx.createLinearGradient(
+                0,
+                0,
+                -this.size * 2,
+                0
+            );
+
+
+        leftGradient.addColorStop(
+            0,
+            `rgba(${c2},${this.alpha})`
+        );
+
+
+        leftGradient.addColorStop(
+            .55,
+            `rgba(${c1},${this.alpha * .8})`
+        );
+
+
+        leftGradient.addColorStop(
+            1,
+            `rgba(${c1},0)`
+        );
+
+
+        ctx.fillStyle =
+            leftGradient;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            -2,
+            -2
+        );
+
+
+        ctx.bezierCurveTo(
+            -this.size,
+            -this.size * 2,
+
+            -this.size * 2.4,
+            -this.size * 1.3,
+
+            -this.size * 2.1,
+            0
+        );
+
+
+        ctx.bezierCurveTo(
+            -this.size * 1.8,
+            this.size * .7,
+
+            -this.size * .8,
+            this.size * .8,
+
+            -2,
+            2
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fill();
+
+
+        /* ---------------------------------------------
+           RIGHT WING
+        --------------------------------------------- */
+
+        const rightGradient =
+            ctx.createLinearGradient(
+                0,
+                0,
+                this.size * 2,
+                0
+            );
+
+
+        rightGradient.addColorStop(
+            0,
+            `rgba(${c2},${this.alpha})`
+        );
+
+
+        rightGradient.addColorStop(
+            .55,
+            `rgba(${c1},${this.alpha * .8})`
+        );
+
+
+        rightGradient.addColorStop(
+            1,
+            `rgba(${c1},0)`
+        );
+
+
+        ctx.fillStyle =
+            rightGradient;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            2,
+            -2
+        );
+
+
+        ctx.bezierCurveTo(
+            this.size,
+            -this.size * 2,
+
+            this.size * 2.4,
+            -this.size * 1.3,
+
+            this.size * 2.1,
+            0
+        );
+
+
+        ctx.bezierCurveTo(
+            this.size * 1.8,
+            this.size * .7,
+
+            this.size * .8,
+            this.size * .8,
+
+            2,
+            2
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fill();
+
+
+        ctx.restore();
+
+
+        /* ---------------------------------------------
+           BODY
+        --------------------------------------------- */
+
+        ctx.fillStyle =
+            "#d9f6ff";
+
+
+        ctx.shadowBlur =
+            15;
+
+
+        ctx.shadowColor =
+            `rgb(${c2})`;
+
+
+        ctx.beginPath();
+
+
+        ctx.ellipse(
+            0,
+            0,
+            this.size * .12,
+            this.size * .8,
+            0,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fill();
+
+
+        /* ---------------------------------------------
+           ANTENNAE
+        --------------------------------------------- */
+
+        ctx.strokeStyle =
+            `rgba(${c2},.6)`;
+
+
+        ctx.lineWidth =
+            .6;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            -2,
+            -this.size * .5
+        );
+
+
+        ctx.quadraticCurveTo(
+            -this.size,
+            -this.size * 1.3,
+
+            -this.size * 1.3,
+            -this.size * 1.5
+        );
+
+
+        ctx.stroke();
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            2,
+            -this.size * .5
+        );
+
+
+        ctx.quadraticCurveTo(
+            this.size,
+            -this.size * 1.3,
+
+            this.size * 1.3,
+            -this.size * 1.5
+        );
+
+
+        ctx.stroke();
+
+
+        ctx.restore();
+
+    }
+
+}
+
+
+/* =========================================================
+   CREATE BUTTERFLIES
+========================================================= */
+
+const butterflies = [];
+
+
+const butterflyCount =
+    Math.max(
+        25,
+        Math.floor(
+            W / 28
+        )
+    );
+
+
+for (
+    let i = 0;
+    i < butterflyCount;
+    i++
+) {
+
+    butterflies.push(
+        new Butterfly()
+    );
+
+}
+
+
+/* =========================================================
+   DRAW BACKGROUND
+========================================================= */
+
+function drawBackground(
+    time
+) {
+
+    /*
+     * Deep gradient.
+     */
+
+    const gradient =
+        ctx.createRadialGradient(
+            W * .5,
+            H * .45,
+            0,
+            W * .5,
+            H * .5,
+            Math.max(
+                W,
+                H
+            )
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "#071a32"
+    );
+
+
+    gradient.addColorStop(
+        .4,
+        "#020a18"
+    );
+
+
+    gradient.addColorStop(
+        1,
+        "#000108"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+
+    /*
+     * Soft blue moon.
+     */
+
+    const moon =
+        ctx.createRadialGradient(
+            W * .7,
+            H * .2,
+            0,
+            W * .7,
+            H * .2,
+            260
+        );
+
+
+    moon.addColorStop(
+        0,
+        "rgba(50,120,255,.13)"
+    );
+
+
+    moon.addColorStop(
+        1,
+        "rgba(50,120,255,0)"
+    );
+
+
+    ctx.fillStyle =
+        moon;
+
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =========================================================
+   DRAW PARTICLES
+========================================================= */
+
+function drawParticles(
+    time
+) {
+
+    particles.forEach(
+        p => {
+
+            p.y -=
+                p.speed;
+
+
+            p.x +=
+                p.drift;
+
+
+            if (
+                p.y <
+                -10
+            ) {
+
+                p.y =
+                    H + 10;
+
+            }
+
+
+            if (
+                p.x <
+                -10
+            ) {
+
+                p.x =
+                    W + 10;
+
+            }
+
+
+            if (
+                p.x >
+                W + 10
+            ) {
+
+                p.x =
+                    -10;
+
+            }
+
+
+            const pulse =
+                (
+                    Math.sin(
+                        time * 2 +
+                        p.phase
+                    ) + 1
+                ) / 2;
+
+
+            ctx.beginPath();
+
+
+            ctx.arc(
+                p.x,
+                p.y,
+                p.size,
+                0,
+                Math.PI * 2
+            );
+
+
+            ctx.fillStyle =
+                `rgba(
+                    100,
+                    180,
+                    255,
+                    ${p.alpha *
+                    (.4 + pulse * .6)}
+                )`;
+
+
+            ctx.fill();
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   DRAW FLOWERS
+========================================================= */
+
+function drawFlowers(
+    time
+) {
+
+    flowers.forEach(
+        flower => {
+
+            /*
+             * Find closest butterfly.
+             */
+
+            let nearest =
+                Infinity;
+
+
+            butterflies.forEach(
+                b => {
+
+                    const d =
+                        distance(
+                            flower,
+                            b
+                        );
+
+
+                    nearest =
+                        Math.min(
+                            nearest,
+                            d
+                        );
+
+                }
+            );
+
+
+            if (
+                nearest <
+                100
+            ) {
+
+                flower.glow +=
+                    .04;
+
+            }
+
+            else {
+
+                flower.glow *=
+                    .96;
+
+            }
+
+
+            flower.glow =
+                clamp(
+                    flower.glow,
+                    0,
+                    1
+                );
+
+
+            const sway =
+                Math.sin(
+                    time +
+                    flower.phase
+                ) *
+                3;
+
+
+            /* Stem */
+
+            ctx.strokeStyle =
+                `rgba(
+                    40,
+                    120,
+                    90,
+                    .5
+                )`;
+
+
+            ctx.lineWidth =
+                1;
+
+
+            ctx.beginPath();
+
+
+            ctx.moveTo(
+                flower.x,
+                flower.y
+            );
+
+
+            ctx.quadraticCurveTo(
+                flower.x +
+                sway,
+
+                flower.y -
+                flower.size * 2,
+
+                flower.x +
+                sway,
+
+                flower.y -
+                flower.size * 4
+            );
+
+
+            ctx.stroke();
+
+
+            /* Glow */
+
+            const glow =
+                ctx.createRadialGradient(
+                    flower.x,
+                    flower.y -
+                    flower.size * 4,
+
+                    0,
+
+                    flower.x,
+                    flower.y -
+                    flower.size * 4,
+
+                    flower.size *
+                    (
+                        5 +
+                        flower.glow * 8
+                    )
+                );
+
+
+            glow.addColorStop(
+                0,
+                flower.color
+                    .replace(
+                        ")",
+                        `,${.35 +
+                        flower.glow * .5})`
+                    )
+            );
+
+
+            glow.addColorStop(
+                1,
+                "rgba(0,0,0,0)"
+            );
+
+
+            /*
+             * Easier generic glow.
+             */
+
+            ctx.fillStyle =
+                glow;
+
+
+            ctx.beginPath();
+
+
+            ctx.arc(
+                flower.x +
+                sway,
+
+                flower.y -
+                flower.size * 4,
+
+                flower.size *
+                (
+                    5 +
+                    flower.glow * 8
+                ),
+
+                0,
+                Math.PI * 2
+            );
+
+
+            ctx.fill();
+
+
+            /* Petals */
+
+            for (
+                let i = 0;
+                i < 6;
+                i++
+            ) {
+
+                const a =
+                    i *
+                    Math.PI /
+                    3;
+
+
+                const px =
+                    flower.x +
+                    sway +
+                    Math.cos(a) *
+                    flower.size;
+
+
+                const py =
+                    flower.y -
+                    flower.size * 4 +
+                    Math.sin(a) *
+                    flower.size;
+
+
+                ctx.fillStyle =
+                    flower.color;
+
+
+                ctx.globalAlpha =
+                    .45 +
+                    flower.glow *
+                    .5;
+
+
+                ctx.beginPath();
+
+
+                ctx.arc(
+                    px,
+                    py,
+                    flower.size *
+                    .65,
+
+                    0,
+                    Math.PI * 2
+                );
+
+
+                ctx.fill();
+
+
+                ctx.globalAlpha =
+                    1;
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   SHOCKWAVES
+========================================================= */
+
+function drawShockwaves() {
+
+    for (
+        let i =
+            shockwaves.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const wave =
+            shockwaves[i];
+
+
+        wave.radius +=
+            8;
+
+
+        wave.alpha *=
+            .94;
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            wave.x,
+            wave.y,
+            wave.radius,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.strokeStyle =
+            `rgba(
+                80,
+                180,
+                255,
+                ${wave.alpha}
+            )`;
+
+
+        ctx.lineWidth =
+            2;
+
+
+        ctx.shadowBlur =
+            20;
+
+
+        ctx.shadowColor =
+            "#168cff";
+
+
+        ctx.stroke();
+
+
+        ctx.shadowBlur =
+            0;
+
+
+        if (
+            wave.alpha <
+            .02
+        ) {
+
+            shockwaves.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   POINTER LIGHT
+========================================================= */
+
+function drawPointerLight() {
+
+    const radius =
+        pointer.down
+            ? 220
+            : 140;
+
+
+    const gradient =
+        ctx.createRadialGradient(
+            pointer.x,
+            pointer.y,
+            0,
+
+            pointer.x,
+            pointer.y,
+            radius
+        );
+
+
+    gradient.addColorStop(
+        0,
+        pointer.down
+            ? "rgba(80,170,255,.18)"
+            : "rgba(60,130,255,.08)"
+    );
+
+
+    gradient.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+        pointer.x,
+        pointer.y,
+        radius,
+        0,
+        Math.PI * 2
+    );
+
+
+    ctx.fill();
+
+}
+
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+
+let lastTime =
+    performance.now();
+
+
+function animate(
+    now
+) {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    const time =
+        now / 1000;
+
+
+    /*
+     * Smooth pointer.
+     */
+
+    pointer.x +=
+        (
+            pointer.targetX -
+            pointer.x
+        ) *
+        .08;
+
+
+    pointer.y +=
+        (
+            pointer.targetY -
+            pointer.y
+        ) *
+        .08;
+
+
+    /* Background */
+
+    drawBackground(
+        time
+    );
+
+
+    /* Particles */
+
+    drawParticles(
+        time
+    );
+
+
+    /* Pointer light */
+
+    drawPointerLight();
+
+
+    /*
+     * Flowers behind butterflies.
+     */
+
+    drawFlowers(
+        time
+    );
+
+
+    /*
+     * Butterflies.
+     */
+
+    butterflies.forEach(
+        butterfly => {
+
+            butterfly.update(
+                time
+            );
+
+        }
+    );
+
+
+    /*
+     * Sort by Y so some butterflies
+     * naturally appear deeper.
+     */
+
+    butterflies.sort(
+        (a,b) =>
+            a.y - b.y
+    );
+
+
+    butterflies.forEach(
+        butterfly => {
+
+            butterfly.draw(
+                time
+            );
+
+        }
+    );
+
+
+    /*
+     * Interaction rings.
+     */
+
+    drawShockwaves();
+
+}
+
+
+requestAnimationFrame(
+    animate
+);
+
+
+/* =========================================================
+   EXTRA TOUCHES
+========================================================= */
+
+/*
+ * Randomly create tiny ambient
+ * sparkles around the pointer.
+ */
+
+setInterval(
+    () => {
+
+        if (
+            pointer.active
+        ) {
+
+            particles.push({
+
+                x:
+                    pointer.x +
+                    random(
+                        -30,
+                        30
+                    ),
+
+                y:
+                    pointer.y +
+                    random(
+                        -30,
+                        30
+                    ),
+
+                size:
+                    random(
+                        .5,
+                        2
+                    ),
+
+                speed:
+                    random(
+                        .1,
+                        .4
+                    ),
+
+                drift:
+                    random(
+                        -.2,
+                        .2
+                    ),
+
+                alpha:
+                    random(
+                        .3,
+                        .8
+                    ),
+
+                phase:
+                    random(
+                        0,
+                        Math.PI * 2
+                    )
+
+            });
+
+
+            /*
+             * Don't let particles grow
+             * forever.
+             */
+
+            if (
+                particles.length >
+                1100
+            ) {
+
+                particles.splice(
+                    0,
+                    100
+                );
+
+            }
+
+        }
+
+    },
+    80
+);
+
+</script>
+
+</body>
+</html>
