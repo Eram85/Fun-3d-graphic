@@ -1,0 +1,2245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Interactive Galaxy</title>
+
+<style>
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    background: #000;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    touch-action: none;
+}
+
+canvas {
+
+    position: fixed;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+}
+
+.title {
+
+    position: fixed;
+
+    top: 34px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 10;
+
+    color:
+        rgba(220,220,255,0.65);
+
+    font-size: 11px;
+
+    letter-spacing: 10px;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+
+}
+
+.subtitle {
+
+    position: fixed;
+
+    top: 61px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 10;
+
+    color:
+        rgba(150,150,255,0.35);
+
+    font-size: 8px;
+
+    letter-spacing: 5px;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+
+}
+
+.instruction {
+
+    position: fixed;
+
+    bottom: 30px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 10;
+
+    color:
+        rgba(210,210,255,0.4);
+
+    font-size: 9px;
+
+    letter-spacing: 5px;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+
+}
+
+.status {
+
+    position: fixed;
+
+    left: 25px;
+
+    bottom: 28px;
+
+    z-index: 10;
+
+    color:
+        rgba(150,160,255,0.25);
+
+    font-size: 8px;
+
+    letter-spacing: 3px;
+
+    pointer-events: none;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+
+<div class="title">
+    GALAXY
+</div>
+
+<div class="subtitle">
+    A LIVING UNIVERSE
+</div>
+
+<div class="instruction">
+    MOVE • EXPLORE • CREATE
+</div>
+
+<div class="status">
+    DEEP SPACE // 001
+</div>
+
+
+<canvas id="canvas"></canvas>
+
+
+<script>
+
+/* =========================================================
+   CANVAS
+========================================================= */
+
+const canvas =
+    document.getElementById("canvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+let W =
+    window.innerWidth;
+
+let H =
+    window.innerHeight;
+
+let DPR =
+    Math.min(
+        window.devicePixelRatio || 1,
+        2
+    );
+
+
+function resize() {
+
+    W =
+        window.innerWidth;
+
+    H =
+        window.innerHeight;
+
+    DPR =
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
+
+    canvas.width =
+        W * DPR;
+
+    canvas.height =
+        H * DPR;
+
+    canvas.style.width =
+        W + "px";
+
+    canvas.style.height =
+        H + "px";
+
+    ctx.setTransform(
+        DPR,
+        0,
+        0,
+        DPR,
+        0,
+        0
+    );
+
+    createStars();
+
+    createDust();
+
+    createPlanets();
+
+    createBackgroundStars();
+
+}
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+
+/* =========================================================
+   POINTER
+========================================================= */
+
+const pointer = {
+
+    x:
+        W / 2,
+
+    y:
+        H / 2,
+
+    targetX:
+        W / 2,
+
+    targetY:
+        H / 2,
+
+    down:
+        false
+
+};
+
+
+window.addEventListener(
+    "pointermove",
+    e => {
+
+        pointer.targetX =
+            e.clientX;
+
+        pointer.targetY =
+            e.clientY;
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerdown",
+    e => {
+
+        pointer.down =
+            true;
+
+        pointer.targetX =
+            e.clientX;
+
+        pointer.targetY =
+            e.clientY;
+
+        createShockwave(
+            e.clientX,
+            e.clientY
+        );
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerup",
+    () => {
+
+        pointer.down =
+            false;
+
+    }
+);
+
+
+/* =========================================================
+   GALAXY
+========================================================= */
+
+const galaxy = {
+
+    x:
+        0,
+
+    y:
+        0,
+
+    rotation:
+        0,
+
+    speed:
+        0.0007,
+
+    tilt:
+        0.55
+
+};
+
+
+/* =========================================================
+   STAR ARRAYS
+========================================================= */
+
+let stars = [];
+
+let backgroundStars = [];
+
+let dust = [];
+
+let planets = [];
+
+let shockwaves = [];
+
+let shootingStars = [];
+
+
+/* =========================================================
+   RANDOM
+========================================================= */
+
+function random(
+    min,
+    max
+) {
+
+    return Math.random() *
+        (max - min) +
+        min;
+
+}
+
+
+/* =========================================================
+   BACKGROUND STARS
+========================================================= */
+
+function createBackgroundStars() {
+
+    backgroundStars = [];
+
+    for (
+        let i = 0;
+        i < 700;
+        i++
+    ) {
+
+        backgroundStars.push({
+
+            x:
+                random(
+                    0,
+                    W
+                ),
+
+            y:
+                random(
+                    0,
+                    H
+                ),
+
+            size:
+                random(
+                    0.2,
+                    1.4
+                ),
+
+            alpha:
+                random(
+                    0.2,
+                    0.8
+                ),
+
+            phase:
+                random(
+                    0,
+                    Math.PI * 2
+                )
+
+        });
+
+    }
+
+}
+
+
+/* =========================================================
+   GALAXY STARS
+========================================================= */
+
+function createStars() {
+
+    stars = [];
+
+    const count =
+        Math.min(
+            6500,
+            Math.floor(
+                W * H / 160
+            )
+        );
+
+
+    for (
+        let i = 0;
+        i < count;
+        i++
+    ) {
+
+        /*
+         * Spiral distribution.
+         */
+
+        const radius =
+            Math.pow(
+                Math.random(),
+                0.65
+            ) *
+            Math.min(
+                W,
+                H
+            ) *
+            0.48;
+
+
+        const arm =
+            Math.floor(
+                Math.random() * 5
+            );
+
+
+        const armAngle =
+            arm *
+            (
+                Math.PI * 2 / 5
+            );
+
+
+        const spiral =
+            radius *
+            0.014;
+
+
+        const angle =
+            armAngle +
+            spiral +
+            random(
+                -0.3,
+                0.3
+            );
+
+
+        /*
+         * Elliptical galaxy.
+         */
+
+        stars.push({
+
+            radius:
+                radius,
+
+            angle:
+                angle,
+
+            z:
+                random(
+                    -1,
+                    1
+                ),
+
+            size:
+                random(
+                    0.25,
+                    2.2
+                ),
+
+            brightness:
+                random(
+                    0.3,
+                    1
+                ),
+
+            hue:
+                random(
+                    0,
+                    1
+                ),
+
+            arm:
+                arm,
+
+            phase:
+                random(
+                    0,
+                    Math.PI * 2
+                )
+
+        });
+
+    }
+
+}
+
+
+/* =========================================================
+   DUST / NEBULA PARTICLES
+========================================================= */
+
+function createDust() {
+
+    dust = [];
+
+    for (
+        let i = 0;
+        i < 500;
+        i++
+    ) {
+
+        dust.push({
+
+            x:
+                random(
+                    -W * 0.5,
+                    W * 1.5
+                ),
+
+            y:
+                random(
+                    -H * 0.5,
+                    H * 1.5
+                ),
+
+            size:
+                random(
+                    15,
+                    90
+                ),
+
+            alpha:
+                random(
+                    0.005,
+                    0.035
+                ),
+
+            phase:
+                random(
+                    0,
+                    Math.PI * 2
+                )
+
+        });
+
+    }
+
+}
+
+
+/* =========================================================
+   PLANETS
+========================================================= */
+
+function createPlanets() {
+
+    planets = [
+
+        {
+
+            orbit:
+                Math.min(
+                    W,
+                    H
+                ) * 0.16,
+
+            size:
+                8,
+
+            speed:
+                0.0007,
+
+            angle:
+                1.5,
+
+            color:
+                "cyan"
+
+        },
+
+        {
+
+            orbit:
+                Math.min(
+                    W,
+                    H
+                ) * 0.23,
+
+            size:
+                13,
+
+            speed:
+                -0.00035,
+
+            angle:
+                4.2,
+
+            color:
+                "violet"
+
+        },
+
+        {
+
+            orbit:
+                Math.min(
+                    W,
+                    H
+                ) * 0.32,
+
+            size:
+                18,
+
+            speed:
+                0.00022,
+
+            angle:
+                2.8,
+
+            color:
+                "gold"
+
+        },
+
+        {
+
+            orbit:
+                Math.min(
+                    W,
+                    H
+                ) * 0.40,
+
+            size:
+                6,
+
+            speed:
+                -0.00018,
+
+            angle:
+                5.7,
+
+            color:
+                "blue"
+
+        }
+
+    ];
+
+}
+
+
+/* =========================================================
+   BACKGROUND
+========================================================= */
+
+function drawBackground() {
+
+    const gradient =
+        ctx.createRadialGradient(
+
+            W / 2,
+            H / 2,
+            0,
+
+            W / 2,
+            H / 2,
+            Math.max(
+                W,
+                H
+            )
+
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "#080518"
+    );
+
+    gradient.addColorStop(
+        0.35,
+        "#030412"
+    );
+
+    gradient.addColorStop(
+        0.7,
+        "#01020a"
+    );
+
+    gradient.addColorStop(
+        1,
+        "#000000"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =========================================================
+   BACKGROUND STARS
+========================================================= */
+
+function drawBackgroundStars(
+    time
+) {
+
+    backgroundStars.forEach(
+        star => {
+
+            const pulse =
+                (
+                    Math.sin(
+                        time * 1.5 +
+                        star.phase
+                    ) + 1
+                ) / 2;
+
+
+            ctx.fillStyle =
+                `rgba(
+                    190,
+                    195,
+                    255,
+                    ${star.alpha *
+                    (
+                        0.5 +
+                        pulse * 0.5
+                    )}
+                )`;
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+                star.x,
+                star.y,
+                star.size,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   NEBULA
+========================================================= */
+
+function drawNebula(
+    time
+) {
+
+    /*
+     * Large colored clouds.
+     */
+
+    const clouds = [
+
+        {
+            x:
+                W * 0.27,
+
+            y:
+                H * 0.36,
+
+            r:
+                260,
+
+            color:
+                "rgba(100,30,255,0.045)"
+
+        },
+
+        {
+
+            x:
+                W * 0.72,
+
+            y:
+                H * 0.60,
+
+            r:
+                320,
+
+            color:
+                "rgba(0,100,255,0.035)"
+
+        },
+
+        {
+
+            x:
+                W * 0.45,
+
+            y:
+                H * 0.72,
+
+            r:
+                250,
+
+            color:
+                "rgba(255,30,150,0.025)"
+
+        },
+
+        {
+
+            x:
+                W * 0.15,
+
+            y:
+                H * 0.75,
+
+            r:
+                200,
+
+            color:
+                "rgba(20,220,255,0.025)"
+
+        }
+
+    ];
+
+
+    clouds.forEach(
+        cloud => {
+
+            const x =
+                cloud.x +
+                Math.sin(
+                    time * 0.03 +
+                    cloud.y
+                ) * 20;
+
+
+            const y =
+                cloud.y +
+                Math.cos(
+                    time * 0.04 +
+                    cloud.x
+                ) * 15;
+
+
+            const gradient =
+                ctx.createRadialGradient(
+
+                    x,
+                    y,
+                    0,
+
+                    x,
+                    y,
+                    cloud.r
+
+                );
+
+
+            gradient.addColorStop(
+                0,
+                cloud.color
+            );
+
+            gradient.addColorStop(
+                1,
+                "rgba(0,0,0,0)"
+            );
+
+
+            ctx.fillStyle =
+                gradient;
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+                x,
+                y,
+                cloud.r,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   GALAXY POSITION
+========================================================= */
+
+function galaxyPosition(
+    star,
+    time
+) {
+
+    const angle =
+        star.angle +
+        galaxy.rotation +
+        time *
+        galaxy.speed *
+        (
+            1 -
+            star.radius /
+            (
+                Math.min(
+                    W,
+                    H
+                ) *
+                0.6
+            )
+        );
+
+
+    /*
+     * Perspective.
+     */
+
+    const x =
+        Math.cos(angle) *
+        star.radius;
+
+
+    const y =
+        Math.sin(angle) *
+        star.radius *
+        galaxy.tilt;
+
+
+    /*
+     * Mouse parallax.
+     */
+
+    const parallaxX =
+        (
+            pointer.x -
+            W / 2
+        ) *
+        star.z *
+        0.08;
+
+
+    const parallaxY =
+        (
+            pointer.y -
+            H / 2
+        ) *
+        star.z *
+        0.04;
+
+
+    return {
+
+        x:
+            W / 2 +
+            x +
+            parallaxX,
+
+        y:
+            H / 2 +
+            y +
+            parallaxY,
+
+        depth:
+            star.z
+
+    };
+
+}
+
+
+/* =========================================================
+   DRAW GALAXY
+========================================================= */
+
+function drawGalaxy(
+    time
+) {
+
+    /*
+     * Sort by depth.
+     */
+
+    stars.sort(
+        (a, b) =>
+            a.z -
+            b.z
+    );
+
+
+    stars.forEach(
+        star => {
+
+            const pos =
+                galaxyPosition(
+                    star,
+                    time
+                );
+
+
+            /*
+             * Black hole gravity
+             * effect from mouse.
+             */
+
+            const dx =
+                pointer.x -
+                pos.x;
+
+            const dy =
+                pointer.y -
+                pos.y;
+
+            const distance =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            let scale =
+                1;
+
+
+            if (
+                distance <
+                180
+            ) {
+
+                scale +=
+                    (
+                        1 -
+                        distance /
+                        180
+                    ) *
+                    1.5;
+
+            }
+
+
+            const pulse =
+                (
+                    Math.sin(
+                        time * 2 +
+                        star.phase
+                    ) + 1
+                ) / 2;
+
+
+            /*
+             * Star color.
+             */
+
+            let r =
+                150;
+
+            let g =
+                170;
+
+            let b =
+                255;
+
+
+            if (
+                star.hue <
+                0.25
+            ) {
+
+                r = 255;
+
+                g = 210;
+
+                b = 160;
+
+            }
+
+            else if (
+                star.hue <
+                0.5
+            ) {
+
+                r = 180;
+
+                g = 210;
+
+                b = 255;
+
+            }
+
+            else if (
+                star.hue <
+                0.75
+            ) {
+
+                r = 210;
+
+                g = 160;
+
+                b = 255;
+
+            }
+
+
+            const alpha =
+                star.brightness *
+                (
+                    0.45 +
+                    pulse * 0.55
+                );
+
+
+            ctx.fillStyle =
+                `rgba(
+                    ${r},
+                    ${g},
+                    ${b},
+                    ${alpha}
+                )`;
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+
+                pos.x,
+
+                pos.y,
+
+                star.size *
+                scale,
+
+                0,
+
+                Math.PI * 2
+
+            );
+
+            ctx.fill();
+
+
+            /*
+             * Bright stars get halos.
+             */
+
+            if (
+                star.size >
+                1.6
+            ) {
+
+                ctx.shadowBlur =
+                    8;
+
+                ctx.shadowColor =
+                    `rgb(
+                        ${r},
+                        ${g},
+                        ${b}
+                    )`;
+
+
+                ctx.beginPath();
+
+                ctx.arc(
+
+                    pos.x,
+
+                    pos.y,
+
+                    star.size *
+                    scale,
+
+                    0,
+
+                    Math.PI * 2
+
+                );
+
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   GALACTIC CORE
+========================================================= */
+
+function drawCore(
+    time
+) {
+
+    const cx =
+        W / 2;
+
+    const cy =
+        H / 2;
+
+
+    /*
+     * Huge core glow.
+     */
+
+    const glow =
+        ctx.createRadialGradient(
+
+            cx,
+            cy,
+            5,
+
+            cx,
+            cy,
+            230
+
+        );
+
+
+    glow.addColorStop(
+        0,
+        "rgba(255,220,180,0.35)"
+    );
+
+    glow.addColorStop(
+        0.12,
+        "rgba(255,150,80,0.18)"
+    );
+
+    glow.addColorStop(
+        0.4,
+        "rgba(170,80,255,0.07)"
+    );
+
+    glow.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        glow;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        cx,
+        cy,
+        230,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    /*
+     * Accretion disk.
+     */
+
+    ctx.save();
+
+    ctx.translate(
+        cx,
+        cy
+    );
+
+
+    ctx.rotate(
+        time * 0.15
+    );
+
+
+    ctx.strokeStyle =
+        "rgba(255,150,80,0.18)";
+
+    ctx.lineWidth =
+        10;
+
+    ctx.shadowBlur =
+        25;
+
+    ctx.shadowColor =
+        "#ff8040";
+
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        0,
+        0,
+        95,
+        28,
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.stroke();
+
+
+    ctx.restore();
+
+
+    /*
+     * Black hole.
+     */
+
+    const black =
+        ctx.createRadialGradient(
+
+            cx,
+            cy,
+            0,
+
+            cx,
+            cy,
+            40
+
+        );
+
+
+    black.addColorStop(
+        0,
+        "#000000"
+    );
+
+    black.addColorStop(
+        0.65,
+        "#000000"
+    );
+
+    black.addColorStop(
+        0.8,
+        "rgba(30,10,30,0.8)"
+    );
+
+    black.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        black;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        cx,
+        cy,
+        42,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+}
+
+
+/* =========================================================
+   DUST
+========================================================= */
+
+function drawDust(
+    time
+) {
+
+    dust.forEach(
+        d => {
+
+            const pulse =
+                (
+                    Math.sin(
+                        time * 0.2 +
+                        d.phase
+                    ) + 1
+                ) / 2;
+
+
+            ctx.fillStyle =
+                `rgba(
+                    120,
+                    90,
+                    255,
+                    ${d.alpha *
+                    pulse}
+                )`;
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+                d.x,
+                d.y,
+                d.size,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   PLANETS
+========================================================= */
+
+function drawPlanets(
+    time
+) {
+
+    const cx =
+        W / 2;
+
+    const cy =
+        H / 2;
+
+
+    planets.forEach(
+        planet => {
+
+            planet.angle +=
+                planet.speed;
+
+
+            const x =
+                cx +
+                Math.cos(
+                    planet.angle
+                ) *
+                planet.orbit;
+
+
+            const y =
+                cy +
+                Math.sin(
+                    planet.angle
+                ) *
+                planet.orbit *
+                0.55;
+
+
+            /*
+             * Orbit.
+             */
+
+            ctx.strokeStyle =
+                "rgba(130,130,255,0.07)";
+
+            ctx.lineWidth =
+                1;
+
+
+            ctx.beginPath();
+
+            ctx.ellipse(
+
+                cx,
+
+                cy,
+
+                planet.orbit,
+
+                planet.orbit * 0.55,
+
+                0,
+
+                0,
+
+                Math.PI * 2
+
+            );
+
+            ctx.stroke();
+
+
+            /*
+             * Planet.
+             */
+
+            let color =
+                "#70dfff";
+
+
+            if (
+                planet.color ===
+                "violet"
+            )
+                color =
+                    "#bb77ff";
+
+
+            if (
+                planet.color ===
+                "gold"
+            )
+                color =
+                    "#ffc36a";
+
+
+            if (
+                planet.color ===
+                "blue"
+            )
+                color =
+                    "#668cff";
+
+
+            /*
+             * Mouse attraction.
+             */
+
+            const dx =
+                pointer.x -
+                x;
+
+            const dy =
+                pointer.y -
+                y;
+
+            const distance =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            let scale =
+                1;
+
+
+            if (
+                distance <
+                120
+            ) {
+
+                scale +=
+                    (
+                        1 -
+                        distance /
+                        120
+                    ) *
+                    0.8;
+
+            }
+
+
+            ctx.shadowBlur =
+                20;
+
+            ctx.shadowColor =
+                color;
+
+
+            ctx.fillStyle =
+                color;
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+                x,
+                y,
+                planet.size *
+                scale,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            ctx.shadowBlur =
+                0;
+
+
+            /*
+             * Planet ring.
+             */
+
+            if (
+                planet.size >
+                10
+            ) {
+
+                ctx.strokeStyle =
+                    "rgba(220,220,255,0.45)";
+
+                ctx.lineWidth =
+                    2;
+
+
+                ctx.beginPath();
+
+                ctx.ellipse(
+
+                    x,
+
+                    y,
+
+                    planet.size *
+                    1.8,
+
+                    planet.size *
+                    0.55,
+
+                    -0.2,
+
+                    0,
+
+                    Math.PI * 2
+
+                );
+
+                ctx.stroke();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   SHOOTING STARS
+========================================================= */
+
+function createShootingStar() {
+
+    shootingStars.push({
+
+        x:
+            random(
+                0,
+                W
+            ),
+
+        y:
+            random(
+                0,
+                H * 0.45
+            ),
+
+        vx:
+            random(
+                7,
+                13
+            ),
+
+        vy:
+            random(
+                3,
+                7
+            ),
+
+        life:
+            1
+
+    });
+
+}
+
+
+function drawShootingStars() {
+
+    for (
+        let i =
+            shootingStars.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const s =
+            shootingStars[i];
+
+
+        s.x +=
+            s.vx;
+
+        s.y +=
+            s.vy;
+
+
+        s.life -=
+            0.015;
+
+
+        const length =
+            70;
+
+
+        const gradient =
+            ctx.createLinearGradient(
+
+                s.x,
+                s.y,
+
+                s.x -
+                s.vx *
+                7,
+
+                s.y -
+                s.vy *
+                7
+
+            );
+
+
+        gradient.addColorStop(
+            0,
+            `rgba(
+                255,
+                255,
+                255,
+                ${s.life}
+            )`
+        );
+
+        gradient.addColorStop(
+            1,
+            "rgba(120,150,255,0)"
+        );
+
+
+        ctx.strokeStyle =
+            gradient;
+
+        ctx.lineWidth =
+            2;
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            s.x,
+            s.y
+        );
+
+        ctx.lineTo(
+
+            s.x -
+            s.vx *
+            7,
+
+            s.y -
+            s.vy *
+            7
+
+        );
+
+        ctx.stroke();
+
+
+        if (
+            s.life <= 0 ||
+            s.x > W + 100 ||
+            s.y > H + 100
+        ) {
+
+            shootingStars.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   SHOCKWAVE
+========================================================= */
+
+function createShockwave(
+    x,
+    y
+) {
+
+    shockwaves.push({
+
+        x:
+            x,
+
+        y:
+            y,
+
+        radius:
+            5,
+
+        alpha:
+            1
+
+    });
+
+}
+
+
+/* =========================================================
+   DRAW SHOCKWAVES
+========================================================= */
+
+function drawShockwaves() {
+
+    for (
+        let i =
+            shockwaves.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const s =
+            shockwaves[i];
+
+
+        s.radius +=
+            7;
+
+        s.alpha *=
+            0.965;
+
+
+        ctx.strokeStyle =
+            `rgba(
+                170,
+                160,
+                255,
+                ${s.alpha}
+            )`;
+
+
+        ctx.lineWidth =
+            2;
+
+
+        ctx.shadowBlur =
+            20;
+
+        ctx.shadowColor =
+            "#9d8cff";
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            s.x,
+            s.y,
+            s.radius,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.stroke();
+
+
+        ctx.shadowBlur =
+            0;
+
+
+        if (
+            s.alpha <
+            0.02
+        ) {
+
+            shockwaves.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   POINTER GRAVITY
+========================================================= */
+
+function drawPointerGravity() {
+
+    const radius =
+        pointer.down
+            ? 180
+            : 100;
+
+
+    const gradient =
+        ctx.createRadialGradient(
+
+            pointer.x,
+            pointer.y,
+
+            0,
+
+            pointer.x,
+            pointer.y,
+
+            radius
+
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "rgba(150,130,255,0.14)"
+    );
+
+    gradient.addColorStop(
+        0.35,
+        "rgba(100,100,255,0.04)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        pointer.x,
+        pointer.y,
+        radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    /*
+     * Cursor point.
+     */
+
+    ctx.fillStyle =
+        "rgba(220,220,255,0.8)";
+
+    ctx.shadowBlur =
+        15;
+
+    ctx.shadowColor =
+        "#aaaaff";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        pointer.x,
+        pointer.y,
+        2,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.shadowBlur =
+        0;
+
+}
+
+
+/* =========================================================
+   VIGNETTE
+========================================================= */
+
+function drawVignette() {
+
+    const gradient =
+        ctx.createRadialGradient(
+
+            W / 2,
+            H / 2,
+
+            H * 0.2,
+
+            W / 2,
+            H / 2,
+
+            Math.max(
+                W,
+                H
+            ) * 0.75
+
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "rgba(0,0,0,0)"
+    );
+
+    gradient.addColorStop(
+        0.7,
+        "rgba(0,0,0,0.1)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgba(0,0,0,0.75)"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+
+function animate(
+    timestamp
+) {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    const time =
+        timestamp / 1000;
+
+
+    /*
+     * Smooth cursor.
+     */
+
+    pointer.x +=
+        (
+            pointer.targetX -
+            pointer.x
+        ) *
+        0.08;
+
+
+    pointer.y +=
+        (
+            pointer.targetY -
+            pointer.y
+        ) *
+        0.08;
+
+
+    /*
+     * Galaxy rotation.
+     */
+
+    galaxy.rotation +=
+        galaxy.speed;
+
+
+    /*
+     * Background.
+     */
+
+    drawBackground();
+
+    drawBackgroundStars(
+        time
+    );
+
+    drawNebula(
+        time
+    );
+
+    drawDust(
+        time
+    );
+
+
+    /*
+     * Main galaxy.
+     */
+
+    drawGalaxy(
+        time
+    );
+
+
+    /*
+     * Planets and core.
+     */
+
+    drawPlanets(
+        time
+    );
+
+    drawCore(
+        time
+    );
+
+
+    /*
+     * Events.
+     */
+
+    drawShootingStars();
+
+    drawShockwaves();
+
+    drawPointerGravity();
+
+    drawVignette();
+
+
+    /*
+     * Random shooting stars.
+     */
+
+    if (
+        Math.random() <
+        0.003
+    ) {
+
+        createShootingStar();
+
+    }
+
+}
+
+
+/* =========================================================
+   START
+========================================================= */
+
+resize();
+
+requestAnimationFrame(
+    animate
+);
+
+</script>
+
+</body>
+
+</html>
