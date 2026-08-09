@@ -1,0 +1,3201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ANT COLONY // AI ECOSYSTEM</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#030504;
+    color:#d8ffe8;
+    font-family:Inter,Arial,sans-serif;
+}
+
+canvas{
+    position:fixed;
+    inset:0;
+    display:block;
+    cursor:crosshair;
+}
+
+#hud{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+}
+
+.panel{
+    position:absolute;
+    background:rgba(3,10,7,.86);
+    border:1px solid rgba(74,255,145,.22);
+    box-shadow:
+        0 0 25px rgba(0,255,120,.06),
+        inset 0 0 25px rgba(0,255,120,.025);
+    backdrop-filter:blur(10px);
+}
+
+#title{
+    left:18px;
+    top:18px;
+    padding:14px 18px;
+    min-width:290px;
+}
+
+#title h1{
+    font-size:15px;
+    letter-spacing:3px;
+    color:#72ffab;
+}
+
+#title p{
+    margin-top:5px;
+    font-size:10px;
+    letter-spacing:2px;
+    color:#638873;
+}
+
+#stats{
+    right:18px;
+    top:18px;
+    width:245px;
+    padding:15px;
+}
+
+.section-title{
+    font-size:10px;
+    letter-spacing:2px;
+    color:#4dbe79;
+    margin-bottom:10px;
+}
+
+.stat{
+    display:flex;
+    justify-content:space-between;
+    font-size:11px;
+    padding:4px 0;
+    border-bottom:1px solid rgba(255,255,255,.04);
+}
+
+.value{
+    color:#9cffc2;
+    font-weight:bold;
+}
+
+.bar{
+    height:4px;
+    background:#0d1912;
+    margin:5px 0 8px;
+    overflow:hidden;
+}
+
+.bar i{
+    display:block;
+    height:100%;
+    width:50%;
+    background:#49ff8c;
+    box-shadow:0 0 10px #49ff8c;
+}
+
+#controls{
+    left:18px;
+    bottom:18px;
+    width:300px;
+    padding:13px;
+    pointer-events:auto;
+}
+
+button{
+    border:1px solid rgba(90,255,150,.3);
+    background:#08130d;
+    color:#8dffb4;
+    padding:8px 10px;
+    margin:3px;
+    cursor:pointer;
+    font-size:10px;
+    letter-spacing:1px;
+    transition:.15s;
+}
+
+button:hover{
+    background:#10281a;
+    border-color:#7affac;
+    box-shadow:0 0 12px rgba(60,255,130,.2);
+}
+
+#event{
+    position:absolute;
+    left:50%;
+    top:18px;
+    transform:translateX(-50%);
+    padding:9px 18px;
+    font-size:10px;
+    letter-spacing:2px;
+    color:#8effb8;
+    opacity:0;
+    transition:.3s;
+}
+
+#graphs{
+    right:18px;
+    bottom:18px;
+    width:300px;
+    height:130px;
+    padding:10px;
+}
+
+#graph{
+    width:100%;
+    height:85px;
+}
+
+#help{
+    position:absolute;
+    left:50%;
+    bottom:12px;
+    transform:translateX(-50%);
+    color:#50725d;
+    font-size:9px;
+    letter-spacing:1px;
+    pointer-events:none;
+}
+
+#fps{
+    position:absolute;
+    left:18px;
+    top:92px;
+    font-size:9px;
+    color:#42654e;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="world"></canvas>
+
+<div id="hud">
+
+    <div id="title" class="panel">
+        <h1>ANT COLONY // SIMULATION 001</h1>
+        <p>EMERGENT ARTIFICIAL ECOSYSTEM</p>
+    </div>
+
+    <div id="fps">SYSTEM INITIALIZING...</div>
+
+    <div id="stats" class="panel">
+
+        <div class="section-title">COLONY TELEMETRY</div>
+
+        <div class="stat">
+            <span>POPULATION</span>
+            <span id="population" class="value">0</span>
+        </div>
+
+        <div class="stat">
+            <span>WORKERS</span>
+            <span id="workers" class="value">0</span>
+        </div>
+
+        <div class="stat">
+            <span>SOLDIERS</span>
+            <span id="soldiers" class="value">0</span>
+        </div>
+
+        <div class="stat">
+            <span>LARVAE</span>
+            <span id="larvae" class="value">0</span>
+        </div>
+
+        <br>
+
+        <div class="stat">
+            <span>FOOD</span>
+            <span id="foodText" class="value">0%</span>
+        </div>
+        <div class="bar"><i id="foodBar"></i></div>
+
+        <div class="stat">
+            <span>WATER</span>
+            <span id="waterText" class="value">0%</span>
+        </div>
+        <div class="bar"><i id="waterBar"></i></div>
+
+        <div class="stat">
+            <span>COLONY HEALTH</span>
+            <span id="healthText" class="value">0%</span>
+        </div>
+        <div class="bar"><i id="healthBar"></i></div>
+
+        <div class="stat">
+            <span>FOOD RATE</span>
+            <span id="foodRate" class="value">0/s</span>
+        </div>
+
+        <div class="stat">
+            <span>EGG RATE</span>
+            <span id="eggRate" class="value">0/s</span>
+        </div>
+
+        <div class="stat">
+            <span>THREAT</span>
+            <span id="threat" class="value">LOW</span>
+        </div>
+
+        <div class="stat">
+            <span>COLONY IQ</span>
+            <span id="iq" class="value">0</span>
+        </div>
+
+    </div>
+
+    <div id="event" class="panel">EVENT</div>
+
+    <div id="controls" class="panel">
+
+        <div class="section-title">ENVIRONMENT TOOLS</div>
+
+        <button onclick="tool='food'">🍎 DROP FOOD</button>
+        <button onclick="tool='water'">💧 WATER</button>
+        <button onclick="tool='predator'">🕷 PREDATOR</button>
+        <button onclick="tool='rain'">🌧 RAIN</button>
+        <button onclick="tool='heat'">☀ HEAT</button>
+        <button onclick="tool='pheromone'">🧪 PHEROMONE</button>
+        <button onclick="disaster()">💥 DISASTER</button>
+        <button onclick="resetWorld()">↻ RESET</button>
+
+    </div>
+
+    <div id="graphs" class="panel">
+        <div class="section-title">LIVE POPULATION GRAPH</div>
+        <canvas id="graph"></canvas>
+    </div>
+
+    <div id="help">
+        CLICK = TOOL &nbsp; | &nbsp;
+        RIGHT CLICK = DANGER &nbsp; | &nbsp;
+        DRAG = PAINT &nbsp; | &nbsp;
+        WHEEL = ZOOM &nbsp; | &nbsp;
+        SHIFT + DRAG = PAN
+    </div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   CANVAS
+============================================================ */
+
+const canvas = document.getElementById("world");
+const ctx = canvas.getContext("2d");
+
+const graphCanvas = document.getElementById("graph");
+const gctx = graphCanvas.getContext("2d");
+
+let W = innerWidth;
+let H = innerHeight;
+
+canvas.width = W;
+canvas.height = H;
+
+function resize(){
+    W = innerWidth;
+    H = innerHeight;
+
+    canvas.width = W;
+    canvas.height = H;
+
+    graphCanvas.width = 280;
+    graphCanvas.height = 85;
+}
+
+addEventListener("resize",resize);
+
+/* ============================================================
+   WORLD
+============================================================ */
+
+const world = {
+    width: 3200,
+    height: 2200,
+
+    time:0,
+
+    food:85,
+    water:65,
+
+    temperature:22,
+
+    rain:0,
+    heat:0,
+
+    threat:0,
+
+    births:0,
+    deaths:0,
+    collected:0,
+
+    queenEnergy:100,
+    queenHealth:100,
+
+    eggs:0,
+    larvae:25,
+
+    construction:0
+};
+
+/* ============================================================
+   CAMERA
+============================================================ */
+
+const camera = {
+    x:world.width/2,
+    y:world.height/2,
+    zoom:.55,
+
+    targetX:world.width/2,
+    targetY:world.height/2
+};
+
+/* ============================================================
+   COLORS
+============================================================ */
+
+const COLORS = {
+    soil:"#17100b",
+    soil2:"#21160e",
+    tunnel:"#090b08",
+
+    food:"#c9ff65",
+    water:"#63c8ff",
+
+    pherFood:"#42ff8c",
+    pherDanger:"#ff4848",
+    pherHome:"#62a7ff",
+    pherExplore:"#f5dc55",
+
+    worker:"#b87948",
+    soldier:"#df6b52",
+    queen:"#e8b75d",
+
+    enemy:"#b43f6b"
+};
+
+/* ============================================================
+   UTILS
+============================================================ */
+
+function rand(a,b){
+    return a + Math.random()*(b-a);
+}
+
+function clamp(v,a,b){
+    return Math.max(a,Math.min(b,v));
+}
+
+function dist(a,b,c,d){
+    return Math.hypot(a-c,b-d);
+}
+
+function angleTo(a,b,c,d){
+    return Math.atan2(d-b,c-a);
+}
+
+function lerp(a,b,t){
+    return a+(b-a)*t;
+}
+
+/* ============================================================
+   PHEROMONE GRID
+============================================================ */
+
+const GRID = 80;
+
+const pherFood = new Float32Array(GRID*GRID);
+const pherDanger = new Float32Array(GRID*GRID);
+const pherHome = new Float32Array(GRID*GRID);
+const pherExplore = new Float32Array(GRID*GRID);
+
+function gridIndex(x,y){
+    const gx = clamp(Math.floor(x/world.width*GRID),0,GRID-1);
+    const gy = clamp(Math.floor(y/world.height*GRID),0,GRID-1);
+    return gy*GRID+gx;
+}
+
+function deposit(field,x,y,value){
+    const gx = Math.floor(x/world.width*GRID);
+    const gy = Math.floor(y/world.height*GRID);
+
+    if(gx<0||gy<0||gx>=GRID||gy>=GRID) return;
+
+    field[gy*GRID+gx] = Math.min(
+        100,
+        field[gy*GRID+gx]+value
+    );
+}
+
+function sample(field,x,y){
+    const gx = clamp(Math.floor(x/world.width*GRID),0,GRID-1);
+    const gy = clamp(Math.floor(y/world.height*GRID),0,GRID-1);
+
+    return field[gy*GRID+gx];
+}
+
+/* ============================================================
+   FOOD
+============================================================ */
+
+const resources = [];
+
+class Resource{
+
+    constructor(type,x,y,amount=30){
+
+        this.type = type;
+
+        this.x=x;
+        this.y=y;
+
+        this.amount=amount;
+
+        this.maxAmount=amount;
+
+        this.radius=type==="water"?16:rand(7,12);
+
+        this.respawn=rand(5,15);
+
+        resources.push(this);
+    }
+
+    update(dt){
+
+        if(this.amount<=0){
+
+            this.respawn-=dt;
+
+            if(this.respawn<=0){
+
+                this.amount=this.maxAmount;
+                this.respawn=rand(10,25);
+            }
+        }
+    }
+
+    draw(){
+
+        if(this.amount<=0)return;
+
+        const p=worldToScreen(this.x,this.y);
+
+        ctx.save();
+
+        if(this.type==="food"){
+
+            ctx.fillStyle=COLORS.food;
+
+            ctx.shadowBlur=12;
+            ctx.shadowColor=COLORS.food;
+
+            ctx.beginPath();
+            ctx.arc(
+                p.x,
+                p.y,
+                this.radius*camera.zoom,
+                0,
+                Math.PI*2
+            );
+            ctx.fill();
+
+        }else{
+
+            ctx.fillStyle="rgba(70,170,255,.5)";
+
+            ctx.beginPath();
+            ctx.arc(
+                p.x,
+                p.y,
+                this.radius*camera.zoom,
+                0,
+                Math.PI*2
+            );
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
+
+/* ============================================================
+   NEST
+============================================================ */
+
+const nest = {
+    x:world.width/2,
+    y:world.height/2+200,
+
+    radius:170,
+
+    rooms:[],
+    tunnels:[]
+};
+
+function generateNest(){
+
+    nest.rooms=[];
+    nest.tunnels=[];
+
+    nest.rooms.push({
+        x:nest.x,
+        y:nest.y,
+        r:95,
+        type:"QUEEN"
+    });
+
+    const types=[
+        "NURSERY",
+        "FOOD",
+        "WORKERS",
+        "SOLDIERS",
+        "STORAGE"
+    ];
+
+    for(let i=0;i<types.length;i++){
+
+        const a=i/5*Math.PI*2;
+
+        const x=
+            nest.x+
+            Math.cos(a)*rand(170,260);
+
+        const y=
+            nest.y+
+            Math.sin(a)*rand(130,210);
+
+        const r=rand(45,75);
+
+        nest.rooms.push({
+            x,y,r,
+            type:types[i]
+        });
+
+        nest.tunnels.push({
+            x1:nest.x,
+            y1:nest.y,
+            x2:x,
+            y2:y
+        });
+    }
+}
+
+generateNest();
+
+/* ============================================================
+   ANT CLASS
+============================================================ */
+
+const ants=[];
+
+const STATES = {
+    SEARCHING:0,
+    FOOD_FOUND:1,
+    RETURNING:2,
+    RESTING:3,
+    DEFENDING:4,
+    FIGHTING:5,
+    EXPLORING:6,
+    ESCAPING:7,
+    CARING:8
+};
+
+class Ant{
+
+    constructor(role="worker"){
+
+        const a=rand(0,Math.PI*2);
+        const r=rand(20,110);
+
+        this.x=nest.x+Math.cos(a)*r;
+        this.y=nest.y+Math.sin(a)*r;
+
+        this.vx=0;
+        this.vy=0;
+
+        this.angle=rand(0,Math.PI*2);
+
+        this.role=role;
+
+        this.state=
+            role==="soldier"
+            ?STATES.DEFENDING
+            :STATES.SEARCHING;
+
+        this.energy=rand(60,100);
+        this.health=100;
+
+        this.age=rand(0,30);
+
+        this.lifespan=rand(120,250);
+
+        this.speed=
+            role==="soldier"
+            ?rand(38,55)
+            :rand(42,62);
+
+        this.strength=
+            role==="soldier"
+            ?rand(8,15)
+            :rand(2,5);
+
+        this.vision=rand(100,180);
+
+        this.exploration=rand(.2,1);
+
+        this.fear=rand(.05,.3);
+
+        this.hunger=rand(.1,.5);
+
+        this.memory=[];
+
+        this.target=null;
+
+        this.carry=0;
+
+        this.maxCarry=rand(2,5);
+
+        this.cooldown=0;
+
+        this.wander=rand(0,10);
+
+        this.trailTimer=0;
+
+        this.generation=1;
+    }
+
+    update(dt){
+
+        this.age+=dt;
+
+        this.energy-=
+            dt*
+            (
+                this.role==="soldier"
+                ?.012
+                :.009
+            );
+
+        this.hunger=
+            clamp(1-this.energy/100,0,1);
+
+        this.cooldown-=dt;
+
+        this.trailTimer-=dt;
+
+        if(this.health<=0||this.age>this.lifespan){
+
+            this.die();
+            return;
+        }
+
+        /* -----------------------------------------------
+           THREAT RESPONSE
+        ------------------------------------------------ */
+
+        const enemy=nearestEnemy(
+            this.x,
+            this.y,
+            this.vision
+        );
+
+        if(enemy){
+
+            const d=dist(
+                this.x,
+                this.y,
+                enemy.x,
+                enemy.y
+            );
+
+            if(this.role==="soldier" && d<130){
+
+                this.state=STATES.FIGHTING;
+                this.target=enemy;
+
+            }else if(d<80){
+
+                this.state=STATES.ESCAPING;
+                this.target=enemy;
+            }
+        }
+
+        /* -----------------------------------------------
+           FOOD SEARCH
+        ------------------------------------------------ */
+
+        if(this.state===STATES.SEARCHING ||
+           this.state===STATES.EXPLORING){
+
+            const food=findFood(
+                this.x,
+                this.y,
+                this.vision
+            );
+
+            if(food){
+
+                this.target=food;
+                this.state=STATES.FOOD_FOUND;
+            }
+        }
+
+        /* -----------------------------------------------
+           STATE MACHINE
+        ------------------------------------------------ */
+
+        switch(this.state){
+
+            case STATES.SEARCHING:
+                this.search(dt);
+                break;
+
+            case STATES.EXPLORING:
+                this.explore(dt);
+                break;
+
+            case STATES.FOOD_FOUND:
+                this.collectFood(dt);
+                break;
+
+            case STATES.RETURNING:
+                this.returnHome(dt);
+                break;
+
+            case STATES.DEFENDING:
+                this.defend(dt);
+                break;
+
+            case STATES.FIGHTING:
+                this.fight(dt);
+                break;
+
+            case STATES.ESCAPING:
+                this.escape(dt);
+                break;
+
+            case STATES.RESTING:
+                this.rest(dt);
+                break;
+
+            case STATES.CARING:
+                this.care(dt);
+                break;
+        }
+
+        /* -----------------------------------------------
+           PHEROMONES
+        ------------------------------------------------ */
+
+        if(this.trailTimer<=0){
+
+            if(this.state===STATES.RETURNING){
+
+                deposit(
+                    pherFood,
+                    this.x,
+                    this.y,
+                    8
+                );
+
+            }else{
+
+                deposit(
+                    pherExplore,
+                    this.x,
+                    this.y,
+                    1
+                );
+            }
+
+            this.trailTimer=.18;
+        }
+
+        /* -----------------------------------------------
+           MOVEMENT
+        ------------------------------------------------ */
+
+        this.x+=this.vx*dt;
+        this.y+=this.vy*dt;
+
+        this.x=clamp(this.x,20,world.width-20);
+        this.y=clamp(this.y,20,world.height-20);
+
+        /* -----------------------------------------------
+           FRICTION
+        ------------------------------------------------ */
+
+        this.vx*=.92;
+        this.vy*=.92;
+
+        /* -----------------------------------------------
+           ENERGY REST
+        ------------------------------------------------ */
+
+        if(
+            dist(this.x,this.y,nest.x,nest.y)<150 &&
+            this.carry===0 &&
+            this.energy<35
+        ){
+            this.state=STATES.RESTING;
+        }
+    }
+
+    search(dt){
+
+        const p=
+            sample(
+                pherFood,
+                this.x,
+                this.y
+            );
+
+        if(p>3){
+
+            this.followPheromone(
+                pherFood,
+                dt
+            );
+
+        }else{
+
+            this.wanderAround(dt);
+        }
+    }
+
+    explore(dt){
+
+        this.wanderAround(dt);
+
+        if(
+            Math.random()<
+            .001*dt
+        ){
+            this.state=STATES.SEARCHING;
+        }
+    }
+
+    wanderAround(dt){
+
+        this.wander+=
+            rand(-2,2)*dt;
+
+        this.angle+=
+            Math.sin(this.wander)*dt;
+
+        this.steer(
+            Math.cos(this.angle),
+            Math.sin(this.angle),
+            dt
+        );
+    }
+
+    followPheromone(field,dt){
+
+        const samples=[
+            -0.7,
+            -0.35,
+            0,
+            0.35,
+            .7
+        ];
+
+        let best=-Infinity;
+        let bestAngle=this.angle;
+
+        for(const offset of samples){
+
+            const a=this.angle+offset;
+
+            const sx=
+                this.x+
+                Math.cos(a)*35;
+
+            const sy=
+                this.y+
+                Math.sin(a)*35;
+
+            const value=
+                sample(field,sx,sy);
+
+            if(value>best){
+
+                best=value;
+                bestAngle=a;
+            }
+        }
+
+        this.angle=
+            lerp(
+                this.angle,
+                bestAngle,
+                .18
+            );
+
+        this.steer(
+            Math.cos(this.angle),
+            Math.sin(this.angle),
+            dt
+        );
+    }
+
+    collectFood(dt){
+
+        if(!this.target ||
+           this.target.amount<=0){
+
+            this.state=STATES.SEARCHING;
+            this.target=null;
+            return;
+        }
+
+        const d=dist(
+            this.x,
+            this.y,
+            this.target.x,
+            this.target.y
+        );
+
+        if(d<15){
+
+            const amount=
+                Math.min(
+                    this.maxCarry,
+                    this.target.amount
+                );
+
+            this.target.amount-=amount;
+
+            this.carry=amount;
+
+            world.collected+=amount;
+
+            this.state=STATES.RETURNING;
+
+            this.target=null;
+
+        }else{
+
+            this.moveTo(
+                this.target.x,
+                this.target.y,
+                dt
+            );
+        }
+    }
+
+    returnHome(dt){
+
+        const d=dist(
+            this.x,
+            this.y,
+            nest.x,
+            nest.y
+        );
+
+        deposit(
+            pherFood,
+            this.x,
+            this.y,
+            7
+        );
+
+        if(d<35){
+
+            world.food=
+                clamp(
+                    world.food+
+                    this.carry*.35,
+                    0,
+                    100
+                );
+
+            this.energy=
+                clamp(
+                    this.energy+this.carry*5,
+                    0,
+                    100
+                );
+
+            this.carry=0;
+
+            this.state=STATES.SEARCHING;
+
+            deposit(
+                pherHome,
+                this.x,
+                this.y,
+                15
+            );
+
+        }else{
+
+            this.moveTo(
+                nest.x,
+                nest.y,
+                dt
+            );
+        }
+    }
+
+    defend(dt){
+
+        if(world.threat>25){
+
+            const enemy=
+                nearestEnemy(
+                    this.x,
+                    this.y,
+                    260
+                );
+
+            if(enemy){
+
+                this.target=enemy;
+                this.state=STATES.FIGHTING;
+
+                return;
+            }
+        }
+
+        this.wanderAround(dt);
+    }
+
+    fight(dt){
+
+        if(!this.target){
+
+            this.state=STATES.DEFENDING;
+            return;
+        }
+
+        const e=this.target;
+
+        const d=dist(
+            this.x,
+            this.y,
+            e.x,
+            e.y
+        );
+
+        if(d>35){
+
+            this.moveTo(
+                e.x,
+                e.y,
+                dt
+            );
+
+        }else if(this.cooldown<=0){
+
+            e.health-=this.strength;
+
+            e.vx+=
+                Math.cos(
+                    angleTo(
+                        this.x,
+                        this.y,
+                        e.x,
+                        e.y
+                    )
+                )*20;
+
+            e.vy+=
+                Math.sin(
+                    angleTo(
+                        this.x,
+                        this.y,
+                        e.x,
+                        e.y
+                    )
+                )*20;
+
+            this.cooldown=.35;
+        }
+
+        if(e.health<=0){
+
+            world.threat=
+                Math.max(
+                    0,
+                    world.threat-15
+                );
+
+            this.state=STATES.DEFENDING;
+            this.target=null;
+        }
+    }
+
+    escape(dt){
+
+        if(!this.target){
+
+            this.state=STATES.SEARCHING;
+            return;
+        }
+
+        const a=angleTo(
+            this.target.x,
+            this.target.y,
+            this.x,
+            this.y
+        );
+
+        this.steer(
+            Math.cos(a),
+            Math.sin(a),
+            dt
+        );
+
+        if(
+            dist(
+                this.x,
+                this.y,
+                this.target.x,
+                this.target.y
+            )>170
+        ){
+
+            this.state=STATES.SEARCHING;
+            this.target=null;
+        }
+    }
+
+    rest(dt){
+
+        this.energy+=dt*5;
+
+        this.moveTo(
+            nest.x,
+            nest.y,
+            dt
+        );
+
+        if(this.energy>85){
+
+            this.state=STATES.SEARCHING;
+        }
+    }
+
+    care(dt){
+
+        this.energy-=dt*.005;
+
+        if(Math.random()<.005*dt){
+
+            world.larvae+=.01;
+        }
+
+        if(
+            dist(
+                this.x,
+                this.y,
+                nest.x,
+                nest.y
+            )>180
+        ){
+            this.state=STATES.SEARCHING;
+        }
+    }
+
+    moveTo(x,y,dt){
+
+        const a=
+            angleTo(
+                this.x,
+                this.y,
+                x,
+                y
+            );
+
+        this.angle=
+            lerp(
+                this.angle,
+                a,
+                .12
+            );
+
+        this.steer(
+            Math.cos(this.angle),
+            Math.sin(this.angle),
+            dt
+        );
+    }
+
+    steer(dx,dy,dt){
+
+        const speed=this.speed;
+
+        this.vx+=dx*speed*dt;
+        this.vy+=dy*speed*dt;
+
+        const max=this.speed*.7;
+
+        const mag=
+            Math.hypot(
+                this.vx,
+                this.vy
+            );
+
+        if(mag>max){
+
+            this.vx=
+                this.vx/mag*max;
+
+            this.vy=
+                this.vy/mag*max;
+        }
+    }
+
+    die(){
+
+        this.health=-999;
+
+        world.deaths++;
+
+        const i=ants.indexOf(this);
+
+        if(i>=0){
+            ants.splice(i,1);
+        }
+    }
+
+    draw(){
+
+        const p=
+            worldToScreen(
+                this.x,
+                this.y
+            );
+
+        const s=
+            camera.zoom;
+
+        if(
+            p.x<-30 ||
+            p.x>W+30 ||
+            p.y<-30 ||
+            p.y>H+30
+        ) return;
+
+        ctx.save();
+
+        ctx.translate(p.x,p.y);
+
+        ctx.rotate(this.angle);
+
+        const color=
+            this.role==="soldier"
+            ?COLORS.soldier
+            :COLORS.worker;
+
+        ctx.strokeStyle=color;
+        ctx.lineWidth=Math.max(1,s*1.4);
+
+        ctx.fillStyle=color;
+
+        /* legs */
+
+        if(s>.35){
+
+            for(let i=-1;i<=1;i++){
+
+                ctx.beginPath();
+
+                ctx.moveTo(
+                    i*2*s,
+                    0
+                );
+
+                ctx.lineTo(
+                    i*5*s,
+                    4*s
+                );
+
+                ctx.stroke();
+
+                ctx.beginPath();
+
+                ctx.moveTo(
+                    i*2*s,
+                    0
+                );
+
+                ctx.lineTo(
+                    i*5*s,
+                    -4*s
+                );
+
+                ctx.stroke();
+            }
+        }
+
+        /* body */
+
+        ctx.beginPath();
+        ctx.ellipse(
+            -3*s,
+            0,
+            5*s,
+            3*s,
+            0,
+            0,
+            Math.PI*2
+        );
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(
+            4*s,
+            0,
+            3*s,
+            0,
+            Math.PI*2
+        );
+        ctx.fill();
+
+        if(this.carry>0){
+
+            ctx.fillStyle=COLORS.food;
+
+            ctx.beginPath();
+
+            ctx.arc(
+                8*s,
+                -3*s,
+                2*s,
+                0,
+                Math.PI*2
+            );
+
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
+
+/* ============================================================
+   QUEEN
+============================================================ */
+
+const queen={
+    x:nest.x,
+    y:nest.y,
+
+    health:100,
+    energy:100,
+
+    eggs:0,
+
+    timer:0,
+
+    update(dt){
+
+        this.energy-=
+            dt*
+            (.025+
+             (100-world.food)*.0004);
+
+        this.timer-=dt;
+
+        if(
+            this.timer<=0 &&
+            world.food>25 &&
+            this.energy>25
+        ){
+
+            const eggRate=
+                .4+
+                world.food*.018;
+
+            this.eggs+=1;
+
+            world.eggs++;
+
+            this.energy-=1;
+
+            this.timer=
+                1/eggRate;
+        }
+
+        if(
+            world.food<10
+        ){
+            this.energy-=dt*.1;
+        }
+
+        this.health=
+            clamp(
+                this.health+
+                (world.food>40?.02:-.03)*dt,
+                0,
+                100
+            );
+    },
+
+    draw(){
+
+        const p=
+            worldToScreen(
+                this.x,
+                this.y
+            );
+
+        ctx.save();
+
+        ctx.shadowBlur=25;
+        ctx.shadowColor=COLORS.queen;
+
+        ctx.fillStyle=COLORS.queen;
+
+        ctx.beginPath();
+        ctx.ellipse(
+            p.x,
+            p.y,
+            25*camera.zoom,
+            16*camera.zoom,
+            0,
+            0,
+            Math.PI*2
+        );
+        ctx.fill();
+
+        ctx.fillStyle="#fff2a5";
+
+        ctx.beginPath();
+        ctx.arc(
+            p.x+16*camera.zoom,
+            p.y,
+            7*camera.zoom,
+            0,
+            Math.PI*2
+        );
+        ctx.fill();
+
+        ctx.restore();
+    }
+};
+
+/* ============================================================
+   ENEMIES
+============================================================ */
+
+const enemies=[];
+
+class Enemy{
+
+    constructor(type="spider",x,y){
+
+        this.type=type;
+
+        this.x=x;
+        this.y=y;
+
+        this.vx=0;
+        this.vy=0;
+
+        this.angle=rand(0,Math.PI*2);
+
+        this.speed=
+            type==="spider"
+            ?rand(20,35)
+            :rand(25,40);
+
+        this.health=
+            type==="spider"
+            ?80
+            :60;
+
+        this.target=null;
+
+        enemies.push(this);
+
+        world.threat=
+            clamp(
+                world.threat+20,
+                0,
+                100
+            );
+    }
+
+    update(dt){
+
+        const target=
+            nearestAnt(
+                this.x,
+                this.y,
+                400
+            );
+
+        if(target){
+
+            this.target=target;
+
+            const a=
+                angleTo(
+                    this.x,
+                    this.y,
+                    target.x,
+                    target.y
+                );
+
+            this.angle=
+                lerp(
+                    this.angle,
+                    a,
+                    .03
+                );
+
+            this.vx+=
+                Math.cos(this.angle)*
+                this.speed*dt;
+
+            this.vy+=
+                Math.sin(this.angle)*
+                this.speed*dt;
+
+            const d=
+                dist(
+                    this.x,
+                    this.y,
+                    target.x,
+                    target.y
+                );
+
+            if(
+                d<25 &&
+                Math.random()<.03
+            ){
+                target.health-=8;
+            }
+
+        }else{
+
+            this.angle+=
+                rand(-1,1)*dt;
+        }
+
+        this.x+=this.vx*dt;
+        this.y+=this.vy*dt;
+
+        this.vx*=.94;
+        this.vy*=.94;
+
+        if(
+            this.health<=0
+        ){
+            const i=enemies.indexOf(this);
+
+            if(i>=0){
+                enemies.splice(i,1);
+            }
+        }
+    }
+
+    draw(){
+
+        const p=
+            worldToScreen(
+                this.x,
+                this.y
+            );
+
+        const s=camera.zoom;
+
+        ctx.save();
+
+        ctx.translate(p.x,p.y);
+        ctx.rotate(this.angle);
+
+        ctx.fillStyle=COLORS.enemy;
+
+        ctx.shadowBlur=15;
+        ctx.shadowColor=COLORS.enemy;
+
+        ctx.beginPath();
+        ctx.ellipse(
+            0,
+            0,
+            11*s,
+            7*s,
+            0,
+            0,
+            Math.PI*2
+        );
+        ctx.fill();
+
+        for(let i=-1;i<=1;i++){
+
+            ctx.strokeStyle=COLORS.enemy;
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                i*4*s,
+                0
+            );
+
+            ctx.lineTo(
+                i*10*s,
+                8*s
+            );
+
+            ctx.stroke();
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                i*4*s,
+                0
+            );
+
+            ctx.lineTo(
+                i*10*s,
+                -8*s
+            );
+
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+}
+
+/* ============================================================
+   RESOURCE GENERATION
+============================================================ */
+
+function generateResources(){
+
+    resources.length=0;
+
+    for(let i=0;i<130;i++){
+
+        let x,y;
+
+        do{
+
+            x=rand(80,world.width-80);
+            y=rand(80,world.height-80);
+
+        }while(
+            dist(x,y,nest.x,nest.y)<250
+        );
+
+        new Resource(
+            "food",
+            x,
+            y,
+            rand(10,50)
+        );
+    }
+
+    for(let i=0;i<25;i++){
+
+        new Resource(
+            "water",
+            rand(100,world.width-100),
+            rand(100,world.height-100),
+            rand(20,60)
+        );
+    }
+}
+
+/* ============================================================
+   ANT CREATION
+============================================================ */
+
+function createAnts(){
+
+    ants.length=0;
+
+    const workers=430;
+    const soldiers=75;
+
+    for(let i=0;i<workers;i++){
+        ants.push(
+            new Ant("worker")
+        );
+    }
+
+    for(let i=0;i<soldiers;i++){
+        ants.push(
+            new Ant("soldier")
+        );
+    }
+}
+
+/* ============================================================
+   SEARCH
+============================================================ */
+
+function findFood(x,y,r){
+
+    let best=null;
+    let bestScore=Infinity;
+
+    for(const f of resources){
+
+        if(
+            f.type!=="food" ||
+            f.amount<=0
+        )continue;
+
+        const d=
+            dist(
+                x,y,
+                f.x,f.y
+            );
+
+        if(d<r){
+
+            const pher=
+                sample(
+                    pherFood,
+                    f.x,
+                    f.y
+                );
+
+            const score=
+                d-
+                pher*12-
+                f.amount*.2;
+
+            if(score<bestScore){
+
+                bestScore=score;
+                best=f;
+            }
+        }
+    }
+
+    return best;
+}
+
+function nearestEnemy(x,y,r){
+
+    let best=null;
+    let bd=r;
+
+    for(const e of enemies){
+
+        const d=
+            dist(
+                x,y,
+                e.x,e.y
+            );
+
+        if(d<bd){
+
+            bd=d;
+            best=e;
+        }
+    }
+
+    return best;
+}
+
+function nearestAnt(x,y,r){
+
+    let best=null;
+    let bd=r;
+
+    for(const a of ants){
+
+        const d=
+            dist(
+                x,y,
+                a.x,a.y
+            );
+
+        if(d<bd){
+
+            bd=d;
+            best=a;
+        }
+    }
+
+    return best;
+}
+
+/* ============================================================
+   NEST RENDERING
+============================================================ */
+
+function drawNest(){
+
+    const p=
+        worldToScreen(
+            nest.x,
+            nest.y
+        );
+
+    ctx.save();
+
+    /* underground aura */
+
+    const grd=
+        ctx.createRadialGradient(
+            p.x,
+            p.y,
+            10,
+            p.x,
+            p.y,
+            400*camera.zoom
+        );
+
+    grd.addColorStop(
+        0,
+        "rgba(80,255,130,.08)"
+    );
+
+    grd.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+    ctx.fillStyle=grd;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        p.x,
+        p.y,
+        400*camera.zoom,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+    /* tunnels */
+
+    for(const t of nest.tunnels){
+
+        const a=
+            worldToScreen(
+                t.x1,
+                t.y1
+            );
+
+        const b=
+            worldToScreen(
+                t.x2,
+                t.y2
+            );
+
+        ctx.strokeStyle=
+            "rgba(95,80,60,.45)";
+
+        ctx.lineWidth=
+            30*camera.zoom;
+
+        ctx.lineCap="round";
+
+        ctx.beginPath();
+
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+
+        ctx.stroke();
+
+        ctx.strokeStyle=
+            "#070806";
+
+        ctx.lineWidth=
+            20*camera.zoom;
+
+        ctx.stroke();
+    }
+
+    /* rooms */
+
+    for(const room of nest.rooms){
+
+        const r=
+            worldToScreen(
+                room.x,
+                room.y
+            );
+
+        ctx.fillStyle=
+            "rgba(8,11,8,.96)";
+
+        ctx.strokeStyle=
+            room.type==="QUEEN"
+            ?"rgba(230,180,70,.5)"
+            :"rgba(100,120,90,.22)";
+
+        ctx.lineWidth=2;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            r.x,
+            r.y,
+            room.r*camera.zoom,
+            0,
+            Math.PI*2
+        );
+
+        ctx.fill();
+        ctx.stroke();
+
+        if(camera.zoom>.45){
+
+            ctx.fillStyle=
+                "rgba(130,180,140,.35)";
+
+            ctx.font=
+                `${8*camera.zoom}px Arial`;
+
+            ctx.textAlign="center";
+
+            ctx.fillText(
+                room.type,
+                r.x,
+                r.y
+            );
+        }
+    }
+
+    ctx.restore();
+}
+
+/* ============================================================
+   PHEROMONE RENDERING
+============================================================ */
+
+function drawPheromones(){
+
+    const cellW=
+        world.width/GRID;
+
+    const cellH=
+        world.height/GRID;
+
+    for(let y=0;y<GRID;y++){
+
+        for(let x=0;x<GRID;x++){
+
+            const i=y*GRID+x;
+
+            const food=pherFood[i];
+            const danger=pherDanger[i];
+            const explore=pherExplore[i];
+
+            if(
+                food<1 &&
+                danger<1 &&
+                explore<1
+            )continue;
+
+            const wx=x*cellW;
+            const wy=y*cellH;
+
+            const p=
+                worldToScreen(
+                    wx,
+                    wy
+                );
+
+            const size=
+                cellW*camera.zoom+1;
+
+            let color;
+
+            if(danger>food){
+
+                color=
+                    `rgba(255,40,40,${Math.min(.22,danger/600)})`;
+
+            }else if(food>explore){
+
+                color=
+                    `rgba(30,255,120,${Math.min(.18,food/500)})`;
+
+            }else{
+
+                color=
+                    `rgba(240,210,40,${Math.min(.08,explore/600)})`;
+            }
+
+            ctx.fillStyle=color;
+
+            ctx.fillRect(
+                p.x,
+                p.y,
+                size,
+                cellH*camera.zoom+1
+            );
+        }
+    }
+}
+
+/* ============================================================
+   ENVIRONMENT
+============================================================ */
+
+function drawEnvironment(){
+
+    ctx.fillStyle="#050704";
+    ctx.fillRect(0,0,W,H);
+
+    const top=
+        worldToScreen(0,0);
+
+    const bottom=
+        worldToScreen(
+            world.width,
+            world.height
+        );
+
+    /* soil */
+
+    ctx.fillStyle=COLORS.soil;
+
+    ctx.fillRect(
+        top.x,
+        top.y,
+        bottom.x-top.x,
+        bottom.y-top.y
+    );
+
+    /* procedural soil particles */
+
+    const seed=42;
+
+    for(let i=0;i<700;i++){
+
+        const x=
+            (i*137.7+seed*31)%
+            world.width;
+
+        const y=
+            (i*83.2+seed*17)%
+            world.height;
+
+        const p=
+            worldToScreen(x,y);
+
+        const size=
+            (i%4+1)*camera.zoom;
+
+        ctx.fillStyle=
+            i%3===0
+            ?"rgba(120,90,60,.12)"
+            :"rgba(50,40,25,.3)";
+
+        ctx.fillRect(
+            p.x,
+            p.y,
+            size,
+            size
+        );
+    }
+}
+
+/* ============================================================
+   WEATHER
+============================================================ */
+
+function drawWeather(){
+
+    if(world.rain>0){
+
+        ctx.save();
+
+        ctx.strokeStyle=
+            `rgba(100,170,255,${world.rain*.35})`;
+
+        ctx.lineWidth=1;
+
+        for(let i=0;i<180;i++){
+
+            const x=
+                (i*83+
+                 world.time*300)%
+                W;
+
+            const y=
+                (i*137+
+                 world.time*500)%
+                H;
+
+            ctx.beginPath();
+
+            ctx.moveTo(x,y);
+
+            ctx.lineTo(
+                x-4,
+                y+14
+            );
+
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    if(world.heat>0){
+
+        ctx.fillStyle=
+            `rgba(255,80,20,${world.heat*.08})`;
+
+        ctx.fillRect(
+            0,0,W,H
+        );
+    }
+}
+
+/* ============================================================
+   WORLD TRANSFORM
+============================================================ */
+
+function worldToScreen(x,y){
+
+    return {
+        x:
+            (x-camera.x)*
+            camera.zoom+
+            W/2,
+
+        y:
+            (y-camera.y)*
+            camera.zoom+
+            H/2
+    };
+}
+
+function screenToWorld(x,y){
+
+    return {
+        x:
+            (x-W/2)/
+            camera.zoom+
+            camera.x,
+
+        y:
+            (y-H/2)/
+            camera.zoom+
+            camera.y
+    };
+}
+
+/* ============================================================
+   GRAPH
+============================================================ */
+
+const history={
+    population:[],
+    food:[],
+    iq:[]
+};
+
+function updateGraph(){
+
+    const pop=
+        ants.length+
+        world.larvae+
+        world.eggs;
+
+    const iq=
+        calculateIQ();
+
+    history.population.push(pop);
+    history.food.push(world.food);
+    history.iq.push(iq);
+
+    if(history.population.length>120){
+
+        history.population.shift();
+        history.food.shift();
+        history.iq.shift();
+    }
+
+    gctx.clearRect(
+        0,
+        0,
+        280,
+        85
+    );
+
+    drawGraph(
+        history.population,
+        85,
+        280
+    );
+
+    drawGraph(
+        history.food,
+        100,
+        280
+    );
+}
+
+function drawGraph(data,max, width){
+
+    if(data.length<2)return;
+
+    let maxValue=
+        Math.max(...data);
+
+    if(maxValue===0)maxValue=1;
+
+    gctx.beginPath();
+
+    data.forEach((v,i)=>{
+
+        const x=
+            i/(data.length-1)*
+            width;
+
+        const y=
+            80-
+            v/maxValue*
+            65;
+
+        if(i===0)
+            gctx.moveTo(x,y);
+        else
+            gctx.lineTo(x,y);
+    });
+
+    gctx.strokeStyle=
+        "rgba(80,255,140,.65)";
+
+    gctx.lineWidth=1.5;
+
+    gctx.stroke();
+}
+
+/* ============================================================
+   COLONY INTELLIGENCE
+============================================================ */
+
+function calculateIQ(){
+
+    const population=
+        ants.length;
+
+    const workers=
+        ants.filter(
+            a=>a.role==="worker"
+        ).length;
+
+    const soldiers=
+        ants.filter(
+            a=>a.role==="soldier"
+        ).length;
+
+    const efficiency=
+        clamp(
+            world.collected/100,
+            0,
+            100
+        );
+
+    const survival=
+        clamp(
+            100-
+            world.deaths*.03,
+            0,
+            100
+        );
+
+    const defense=
+        clamp(
+            100-
+            world.threat,
+            0,
+            100
+        );
+
+    const growth=
+        clamp(
+            population/7,
+            0,
+            100
+        );
+
+    const exploration=
+        clamp(
+            ants.reduce(
+                (s,a)=>
+                    s+a.exploration,
+                0
+            )/
+            Math.max(1,population)*
+            100,
+            0,
+            100
+        );
+
+    return Math.round(
+        efficiency*.20+
+        survival*.15+
+        defense*.15+
+        growth*.20+
+        exploration*.15+
+        world.food*.15
+    );
+}
+
+/* ============================================================
+   REPRODUCTION
+============================================================ */
+
+let reproductionTimer=0;
+
+function updateColony(dt){
+
+    reproductionTimer-=dt;
+
+    /* eggs become larvae */
+
+    if(
+        world.eggs>0 &&
+        Math.random()<.01*dt
+    ){
+
+        world.eggs--;
+        world.larvae++;
+
+    }
+
+    /* larvae become adults */
+
+    if(
+        world.larvae>1 &&
+        Math.random()<
+        .004*
+        dt*
+        clamp(world.food/50,.1,2)
+    ){
+
+        world.larvae--;
+
+        const role=
+            Math.random()<.18
+            ?"soldier"
+            :"worker";
+
+        ants.push(
+            new Ant(role)
+        );
+
+        world.births++;
+    }
+
+    /* queen reproduction */
+
+    if(
+        world.food>35 &&
+        world.queenHealth>20
+    ){
+
+        world.food-=
+            dt*.04;
+
+    }else{
+
+        world.food-=
+            dt*.1;
+    }
+
+    world.food=
+        clamp(
+            world.food,
+            0,
+            100
+        );
+
+    /* water */
+
+    world.water-=
+        dt*.012;
+
+    world.water=
+        clamp(
+            world.water,
+            0,
+            100
+        );
+
+    /* environmental recovery */
+
+    if(world.rain>0){
+
+        world.water+=
+            dt*.3;
+
+        world.food+=
+            dt*.015;
+
+        world.rain-=
+            dt*.025;
+    }
+
+    if(world.heat>0){
+
+        world.water-=
+            dt*.15;
+
+        world.food-=
+            dt*.04;
+
+        world.heat-=
+            dt*.02;
+    }
+
+    /* colony health */
+
+    if(world.food<15){
+
+        world.queenHealth-=
+            dt*.1;
+
+    }else{
+
+        world.queenHealth+=
+            dt*.025;
+    }
+
+    world.queenHealth=
+        clamp(
+            world.queenHealth,
+            0,
+            100
+        );
+
+    /* colony expansion */
+
+    if(
+        ants.length>
+        550+
+        world.construction*20
+    ){
+
+        world.construction=
+            clamp(
+                world.construction+
+                dt*.002,
+                0,
+                100
+            );
+    }
+
+    /* emergency exploration */
+
+    if(world.food<25){
+
+        for(const a of ants){
+
+            if(a.role==="worker"){
+
+                a.exploration=
+                    Math.min(
+                        2,
+                        a.exploration+
+                        dt*.002
+                    );
+            }
+        }
+    }
+}
+
+/* ============================================================
+   PREDATOR / DISASTER
+============================================================ */
+
+function disaster(){
+
+    showEvent("⚠ EXTREME ENVIRONMENTAL DISASTER");
+
+    world.threat=100;
+
+    world.rain=1;
+
+    for(let i=0;i<5;i++){
+
+        new Enemy(
+            "spider",
+            nest.x+rand(-400,400),
+            nest.y+rand(-300,300)
+        );
+    }
+
+    for(let i=0;i<GRID*GRID;i++){
+
+        pherFood[i]*=.25;
+        pherExplore[i]*=.25;
+    }
+}
+
+function showEvent(text){
+
+    const el=
+        document.getElementById("event");
+
+    el.textContent=text;
+
+    el.style.opacity=1;
+
+    clearTimeout(showEvent.timer);
+
+    showEvent.timer=
+        setTimeout(()=>{
+            el.style.opacity=0;
+        },2200);
+}
+
+/* ============================================================
+   TOOLS
+============================================================ */
+
+let tool="food";
+
+let mouse={
+    x:0,
+    y:0,
+    down:false,
+    shift:false
+};
+
+canvas.addEventListener(
+    "mousemove",
+    e=>{
+
+        mouse.x=e.clientX;
+        mouse.y=e.clientY;
+
+        if(mouse.down){
+
+            applyTool(
+                screenToWorld(
+                    mouse.x,
+                    mouse.y
+                )
+            );
+        }
+    }
+);
+
+canvas.addEventListener(
+    "mousedown",
+    e=>{
+
+        mouse.down=true;
+
+        const p=
+            screenToWorld(
+                e.clientX,
+                e.clientY
+            );
+
+        if(e.button===2){
+
+            deposit(
+                pherDanger,
+                p.x,
+                p.y,
+                100
+            );
+
+            world.threat=
+                clamp(
+                    world.threat+25,
+                    0,
+                    100
+                );
+
+            showEvent(
+                "DANGER ZONE CREATED"
+            );
+
+        }else{
+
+            applyTool(p);
+        }
+    }
+);
+
+canvas.addEventListener(
+    "mouseup",
+    ()=>{
+        mouse.down=false;
+    }
+);
+
+canvas.addEventListener(
+    "contextmenu",
+    e=>e.preventDefault()
+);
+
+canvas.addEventListener(
+    "wheel",
+    e=>{
+
+        const before=
+            screenToWorld(
+                e.clientX,
+                e.clientY
+            );
+
+        camera.zoom=
+            clamp(
+                camera.zoom*
+                (e.deltaY<0?1.12:.89),
+                .15,
+                3
+            );
+
+        const after=
+            screenToWorld(
+                e.clientX,
+                e.clientY
+            );
+
+        camera.x+=
+            before.x-after.x;
+
+        camera.y+=
+            before.y-after.y;
+    },
+    {passive:true}
+);
+
+function applyTool(p){
+
+    if(
+        p.x<0||
+        p.y<0||
+        p.x>world.width||
+        p.y>world.height
+    )return;
+
+    switch(tool){
+
+        case "food":
+
+            new Resource(
+                "food",
+                p.x,
+                p.y,
+                rand(30,70)
+            );
+
+            break;
+
+        case "water":
+
+            new Resource(
+                "water",
+                p.x,
+                p.y,
+                rand(40,80)
+            );
+
+            break;
+
+        case "predator":
+
+            new Enemy(
+                "spider",
+                p.x,
+                p.y
+            );
+
+            showEvent(
+                "PREDATOR DETECTED"
+            );
+
+            break;
+
+        case "rain":
+
+            world.rain=1;
+
+            showEvent(
+                "HEAVY RAIN STARTED"
+            );
+
+            break;
+
+        case "heat":
+
+            world.heat=1;
+
+            showEvent(
+                "EXTREME HEAT WAVE"
+            );
+
+            break;
+
+        case "pheromone":
+
+            for(let i=0;i<30;i++){
+
+                deposit(
+                    pherFood,
+                    p.x+rand(-100,100),
+                    p.y+rand(-100,100),
+                    50
+                );
+            }
+
+            break;
+    }
+}
+
+/* ============================================================
+   PHEROMONE DECAY
+============================================================ */
+
+function decayPheromones(dt){
+
+    const rainFactor=
+        world.rain>0
+        ?.96
+        :.985;
+
+    for(let i=0;i<pherFood.length;i++){
+
+        pherFood[i]*=
+            Math.pow(
+                rainFactor,
+                dt*60
+            );
+
+        pherDanger[i]*=
+            Math.pow(
+                .985,
+                dt*60
+            );
+
+        pherHome[i]*=
+            Math.pow(
+                .99,
+                dt*60
+            );
+
+        pherExplore[i]*=
+            Math.pow(
+                .995,
+                dt*60
+            );
+    }
+}
+
+/* ============================================================
+   DRAW
+============================================================ */
+
+function draw(){
+
+    ctx.clearRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+    drawEnvironment();
+
+    drawPheromones();
+
+    drawNest();
+
+    for(const r of resources)
+        r.draw();
+
+    for(const e of enemies)
+        e.draw();
+
+    for(const a of ants)
+        a.draw();
+
+    queen.draw();
+
+    drawWeather();
+
+    /* vignette */
+
+    const vignette=
+        ctx.createRadialGradient(
+            W/2,
+            H/2,
+            Math.min(W,H)*.2,
+            W/2,
+            H/2,
+            Math.max(W,H)*.75
+        );
+
+    vignette.addColorStop(
+        0,
+        "rgba(0,0,0,0)"
+    );
+
+    vignette.addColorStop(
+        1,
+        "rgba(0,0,0,.45)"
+    );
+
+    ctx.fillStyle=vignette;
+
+    ctx.fillRect(
+        0,0,W,H
+    );
+}
+
+/* ============================================================
+   HUD
+============================================================ */
+
+let lastGraph=0;
+let lastHUD=0;
+
+function updateHUD(now){
+
+    if(now-lastHUD<250)return;
+
+    lastHUD=now;
+
+    const workers=
+        ants.filter(
+            a=>a.role==="worker"
+        ).length;
+
+    const soldiers=
+        ants.filter(
+            a=>a.role==="soldier"
+        ).length;
+
+    const pop=
+        ants.length+
+        world.larvae+
+        world.eggs;
+
+    const health=
+        clamp(
+            (
+                world.queenHealth+
+                world.food+
+                world.water
+            )/3,
+            0,
+            100
+        );
+
+    const iq=
+        calculateIQ();
+
+    document.getElementById(
+        "population"
+    ).textContent=pop;
+
+    document.getElementById(
+        "workers"
+    ).textContent=workers;
+
+    document.getElementById(
+        "soldiers"
+    ).textContent=soldiers;
+
+    document.getElementById(
+        "larvae"
+    ).textContent=
+        Math.floor(world.larvae);
+
+    document.getElementById(
+        "foodText"
+    ).textContent=
+        Math.floor(world.food)+"%";
+
+    document.getElementById(
+        "waterText"
+    ).textContent=
+        Math.floor(world.water)+"%";
+
+    document.getElementById(
+        "healthText"
+    ).textContent=
+        Math.floor(health)+"%";
+
+    document.getElementById(
+        "foodBar"
+    ).style.width=
+        world.food+"%";
+
+    document.getElementById(
+        "waterBar"
+    ).style.width=
+        world.water+"%";
+
+    document.getElementById(
+        "healthBar"
+    ).style.width=
+        health+"%";
+
+    document.getElementById(
+        "foodRate"
+    ).textContent=
+        (world.collected/Math.max(world.time,1))
+        .toFixed(1)+"/s";
+
+    document.getElementById(
+        "eggRate"
+    ).textContent=
+        (world.eggs/Math.max(world.time,1))
+        .toFixed(2)+"/s";
+
+    let threatText="LOW";
+
+    if(world.threat>65)
+        threatText="CRITICAL";
+    else if(world.threat>35)
+        threatText="MEDIUM";
+
+    document.getElementById(
+        "threat"
+    ).textContent=
+        threatText;
+
+    document.getElementById(
+        "iq"
+    ).textContent=
+        iq;
+}
+
+/* ============================================================
+   FPS
+============================================================ */
+
+let fpsFrames=0;
+let fpsTime=performance.now();
+
+function updateFPS(now){
+
+    fpsFrames++;
+
+    if(now-fpsTime>1000){
+
+        const fps=
+            Math.round(
+                fpsFrames/
+                ((now-fpsTime)/1000)
+            );
+
+        document.getElementById(
+            "fps"
+        ).textContent=
+            `SYSTEM ONLINE // ${fps} FPS // ${ants.length} AGENTS`;
+
+        fpsFrames=0;
+        fpsTime=now;
+    }
+}
+
+/* ============================================================
+   MAIN LOOP
+============================================================ */
+
+let last=performance.now();
+
+function loop(now){
+
+    const dt=
+        Math.min(
+            .033,
+            (now-last)/1000
+        );
+
+    last=now;
+
+    world.time+=dt;
+
+    /* resources */
+
+    for(const r of resources)
+        r.update(dt);
+
+    /* ants */
+
+    for(let i=ants.length-1;i>=0;i--){
+
+        if(ants[i])
+            ants[i].update(dt);
+    }
+
+    /* enemies */
+
+    for(let i=enemies.length-1;i>=0;i--){
+
+        if(enemies[i])
+            enemies[i].update(dt);
+    }
+
+    /* queen */
+
+    queen.update(dt);
+
+    /* colony */
+
+    updateColony(dt);
+
+    /* pheromone */
+
+    decayPheromones(dt);
+
+    /* threat decay */
+
+    world.threat=
+        Math.max(
+            0,
+            world.threat-
+            dt*.7
+        );
+
+    /* automatic predator generation */
+
+    if(
+        Math.random()<
+        .00004*dt*1000
+    ){
+
+        const side=
+            Math.floor(
+                Math.random()*4
+            );
+
+        let x,y;
+
+        if(side===0){
+            x=rand(0,world.width);
+            y=30;
+        }else if(side===1){
+            x=world.width-30;
+            y=rand(0,world.height);
+        }else if(side===2){
+            x=rand(0,world.width);
+            y=world.height-30;
+        }else{
+            x=30;
+            y=rand(0,world.height);
+        }
+
+        new Enemy(
+            "spider",
+            x,y
+        );
+    }
+
+    /* camera smoothing */
+
+    camera.x=
+        lerp(
+            camera.x,
+            camera.targetX,
+            .08
+        );
+
+    camera.y=
+        lerp(
+            camera.y,
+            camera.targetY,
+            .08
+        );
+
+    draw();
+
+    updateHUD(now);
+    updateFPS(now);
+
+    if(now-lastGraph>1000){
+
+        updateGraph();
+
+        lastGraph=now;
+    }
+
+    requestAnimationFrame(loop);
+}
+
+/* ============================================================
+   RESET
+============================================================ */
+
+function resetWorld(){
+
+    world.time=0;
+
+    world.food=85;
+    world.water=65;
+
+    world.threat=0;
+
+    world.births=0;
+    world.deaths=0;
+    world.collected=0;
+
+    world.queenHealth=100;
+    world.queenEnergy=100;
+
+    world.eggs=0;
+    world.larvae=25;
+
+    world.construction=0;
+
+    enemies.length=0;
+
+    pherFood.fill(0);
+    pherDanger.fill(0);
+    pherHome.fill(0);
+    pherExplore.fill(0);
+
+    generateNest();
+    generateResources();
+    createAnts();
+
+    queen.x=nest.x;
+    queen.y=nest.y;
+
+    history.population=[];
+    history.food=[];
+    history.iq=[];
+
+    camera.x=nest.x;
+    camera.y=nest.y;
+}
+
+/* ============================================================
+   START
+============================================================ */
+
+resetWorld();
+
+requestAnimationFrame(loop);
+
+</script>
+
+</body>
+</html>
