@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Interactive Fire</title>
+
+<style>
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            ellipse at center bottom,
+            #321000 0%,
+            #090402 45%,
+            #010101 100%
+        );
+
+    font-family: Arial, sans-serif;
+
+    touch-action: none;
+}
+
+canvas {
+
+    position: fixed;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: block;
+}
+
+.title {
+
+    position: fixed;
+
+    top: 38px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    color:
+        rgba(255,190,100,0.65);
+
+    font-size: 11px;
+
+    letter-spacing: 9px;
+
+    z-index: 10;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+}
+
+.subtitle {
+
+    position: fixed;
+
+    top: 65px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    color:
+        rgba(255,130,40,0.3);
+
+    font-size: 8px;
+
+    letter-spacing: 5px;
+
+    z-index: 10;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+}
+
+.instruction {
+
+    position: fixed;
+
+    bottom: 30px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    color:
+        rgba(255,190,120,0.45);
+
+    font-size: 9px;
+
+    letter-spacing: 5px;
+
+    z-index: 10;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="title">
+    INTERACTIVE FIRE
+</div>
+
+<div class="subtitle">
+    TOUCH THE FLAME
+</div>
+
+<div class="instruction">
+    MOVE • TOUCH • IGNITE
+</div>
+
+
+<canvas id="canvas"></canvas>
+
+
+<script>
+
+/* =====================================================
+   CANVAS
+===================================================== */
+
+const canvas =
+    document.getElementById(
+        "canvas"
+    );
+
+const ctx =
+    canvas.getContext(
+        "2d"
+    );
+
+let W =
+    window.innerWidth;
+
+let H =
+    window.innerHeight;
+
+let DPR =
+    Math.min(
+        window.devicePixelRatio || 1,
+        2
+    );
+
+
+function resize() {
+
+    W =
+        window.innerWidth;
+
+    H =
+        window.innerHeight;
+
+    DPR =
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
+
+    canvas.width =
+        W * DPR;
+
+    canvas.height =
+        H * DPR;
+
+    canvas.style.width =
+        W + "px";
+
+    canvas.style.height =
+        H + "px";
+
+    ctx.setTransform(
+        DPR,
+        0,
+        0,
+        DPR,
+        0,
+        0
+    );
+
+}
+
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+
+/* =====================================================
+   FIRE POSITION
+===================================================== */
+
+const fire = {
+
+    x:
+        W / 2,
+
+    y:
+        H * 0.76,
+
+    targetX:
+        W / 2,
+
+    targetY:
+        H * 0.76,
+
+    intensity:
+        1,
+
+    targetIntensity:
+        1,
+
+    active:
+        false
+
+};
+
+
+/* =====================================================
+   POINTER
+===================================================== */
+
+window.addEventListener(
+    "pointermove",
+    function(e) {
+
+        fire.targetX =
+            e.clientX;
+
+        fire.targetY =
+            Math.min(
+                e.clientY,
+                H * 0.82
+            );
+
+        fire.active =
+            true;
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerdown",
+    function(e) {
+
+        fire.targetX =
+            e.clientX;
+
+        fire.targetY =
+            Math.min(
+                e.clientY,
+                H * 0.82
+            );
+
+        fire.targetIntensity =
+            2.5;
+
+        createExplosion(
+            e.clientX,
+            e.clientY
+        );
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerup",
+    function() {
+
+        fire.targetIntensity =
+            1;
+
+    }
+);
+
+
+/* =====================================================
+   RANDOM
+===================================================== */
+
+function random(min, max) {
+
+    return Math.random() *
+        (max - min) +
+        min;
+
+}
+
+
+/* =====================================================
+   FLAME PARTICLES
+===================================================== */
+
+let flames = [];
+
+
+function createFlame() {
+
+    const spread =
+        45 *
+        fire.intensity;
+
+
+    flames.push({
+
+        x:
+            fire.x +
+            random(
+                -spread,
+                spread
+            ),
+
+        y:
+            fire.y +
+            random(
+                -8,
+                10
+            ),
+
+        vx:
+            random(
+                -0.7,
+                0.7
+            ),
+
+        vy:
+            random(
+                -5,
+                -1.8
+            ) *
+            fire.intensity,
+
+        size:
+            random(
+                8,
+                30
+            ) *
+            fire.intensity,
+
+        life:
+            1,
+
+        decay:
+            random(
+                0.008,
+                0.025
+            ),
+
+        wobble:
+            random(
+                0,
+                Math.PI * 2
+            ),
+
+        type:
+            Math.random()
+
+    });
+
+}
+
+
+/* =====================================================
+   SPARKS
+===================================================== */
+
+let sparks = [];
+
+
+function createSpark(
+    x,
+    y,
+    power = 1
+) {
+
+    sparks.push({
+
+        x: x,
+
+        y: y,
+
+        vx:
+            random(
+                -2,
+                2
+            ) *
+            power,
+
+        vy:
+            random(
+                -6,
+                -2
+            ) *
+            power,
+
+        size:
+            random(
+                1,
+                3
+            ),
+
+        life:
+            1,
+
+        decay:
+            random(
+                0.015,
+                0.035
+            )
+
+    });
+
+}
+
+
+/* =====================================================
+   SMOKE
+===================================================== */
+
+let smoke = [];
+
+
+function createSmoke() {
+
+    smoke.push({
+
+        x:
+            fire.x +
+            random(
+                -25,
+                25
+            ),
+
+        y:
+            fire.y -
+            random(
+                40,
+                90
+            ),
+
+        vx:
+            random(
+                -0.5,
+                0.5
+            ),
+
+        vy:
+            random(
+                -1.4,
+                -0.5
+            ),
+
+        size:
+            random(
+                10,
+                30
+            ),
+
+        life:
+            1,
+
+        decay:
+            random(
+                0.002,
+                0.006
+            )
+
+    });
+
+}
+
+
+/* =====================================================
+   EXPLOSION
+===================================================== */
+
+function createExplosion(
+    x,
+    y
+) {
+
+    for (
+        let i = 0;
+        i < 45;
+        i++
+    ) {
+
+        createSpark(
+            x,
+            y,
+            random(
+                0.6,
+                1.8
+            )
+        );
+
+    }
+
+
+    /*
+     * Huge temporary flame.
+     */
+
+    fire.targetIntensity =
+        3.5;
+
+}
+
+
+/* =====================================================
+   DRAW BACKGROUND
+===================================================== */
+
+function drawBackground(
+    time
+) {
+
+    const gradient =
+        ctx.createRadialGradient(
+
+            fire.x,
+            fire.y,
+            20,
+
+            fire.x,
+            fire.y,
+            H * 0.8
+
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "rgba(255,90,10,0.16)"
+    );
+
+    gradient.addColorStop(
+        0.25,
+        "rgba(180,40,5,0.07)"
+    );
+
+    gradient.addColorStop(
+        0.6,
+        "rgba(60,10,0,0.025)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        "#020202";
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =====================================================
+   LOGS
+===================================================== */
+
+function drawLogs(
+    time
+) {
+
+    const y =
+        H * 0.81;
+
+
+    /*
+     * Back log
+     */
+
+    ctx.save();
+
+    ctx.translate(
+        W / 2 - 65,
+        y
+    );
+
+    ctx.rotate(
+        -0.18
+    );
+
+
+    ctx.fillStyle =
+        "#351508";
+
+    ctx.shadowBlur =
+        10;
+
+    ctx.shadowColor =
+        "#ff4b00";
+
+
+    ctx.fillRect(
+        -80,
+        -12,
+        160,
+        24
+    );
+
+
+    ctx.fillStyle =
+        "#100805";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        -80,
+        0,
+        12,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.restore();
+
+
+    /*
+     * Front log
+     */
+
+    ctx.save();
+
+    ctx.translate(
+        W / 2 + 45,
+        y + 10
+    );
+
+    ctx.rotate(
+        0.18
+    );
+
+
+    ctx.fillStyle =
+        "#401807";
+
+
+    ctx.fillRect(
+        -90,
+        -13,
+        180,
+        26
+    );
+
+
+    ctx.fillStyle =
+        "#140805";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        90,
+        0,
+        13,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.restore();
+
+}
+
+
+/* =====================================================
+   FLAME PARTICLE DRAW
+===================================================== */
+
+function drawFlame(
+    p
+) {
+
+    const wobble =
+        Math.sin(
+            p.wobble
+        ) *
+        8;
+
+
+    p.wobble +=
+        0.08;
+
+
+    const gradient =
+        ctx.createRadialGradient(
+
+            p.x,
+            p.y,
+            0,
+
+            p.x,
+            p.y,
+            p.size
+
+        );
+
+
+    if (
+        p.type < 0.35
+    ) {
+
+        gradient.addColorStop(
+            0,
+            "rgba(255,255,190,1)"
+        );
+
+        gradient.addColorStop(
+            0.25,
+            "rgba(255,230,70,0.95)"
+        );
+
+        gradient.addColorStop(
+            0.65,
+            "rgba(255,90,0,0.8)"
+        );
+
+        gradient.addColorStop(
+            1,
+            "rgba(255,20,0,0)"
+        );
+
+    } else {
+
+        gradient.addColorStop(
+            0,
+            "rgba(255,220,90,0.9)"
+        );
+
+        gradient.addColorStop(
+            0.5,
+            "rgba(255,60,0,0.7)"
+        );
+
+        gradient.addColorStop(
+            1,
+            "rgba(150,10,0,0)"
+        );
+
+    }
+
+
+    ctx.fillStyle =
+        gradient;
+
+
+    ctx.beginPath();
+
+
+    ctx.ellipse(
+
+        p.x +
+        wobble,
+
+        p.y,
+
+        p.size *
+        0.65,
+
+        p.size,
+
+        0,
+
+        0,
+
+        Math.PI * 2
+
+    );
+
+
+    ctx.fill();
+
+}
+
+
+/* =====================================================
+   UPDATE FLAMES
+===================================================== */
+
+function updateFlames() {
+
+    for (
+        let i =
+            flames.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const p =
+            flames[i];
+
+
+        p.x +=
+            p.vx;
+
+        p.y +=
+            p.vy;
+
+
+        p.vx +=
+            Math.sin(
+                p.wobble
+            ) *
+            0.015;
+
+
+        p.size *=
+            0.995;
+
+
+        p.life -=
+            p.decay;
+
+
+        drawFlame(
+            p
+        );
+
+
+        if (
+            p.life <= 0 ||
+            p.size < 2
+        ) {
+
+            flames.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   SPARKS
+===================================================== */
+
+function updateSparks() {
+
+    for (
+        let i =
+            sparks.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const s =
+            sparks[i];
+
+
+        s.x +=
+            s.vx;
+
+        s.y +=
+            s.vy;
+
+
+        s.vy +=
+            0.08;
+
+
+        s.vx *=
+            0.99;
+
+
+        s.life -=
+            s.decay;
+
+
+        ctx.fillStyle =
+            `rgba(
+                255,
+                ${Math.floor(
+                    120 +
+                    Math.random() * 120
+                )},
+                30,
+                ${s.life}
+            )`;
+
+
+        ctx.shadowBlur =
+            12;
+
+        ctx.shadowColor =
+            "#ff7a00";
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            s.x,
+            s.y,
+            s.size,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+
+        ctx.shadowBlur = 0;
+
+
+        if (
+            s.life <= 0
+        ) {
+
+            sparks.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   SMOKE
+===================================================== */
+
+function updateSmoke() {
+
+    for (
+        let i =
+            smoke.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const s =
+            smoke[i];
+
+
+        s.x +=
+            s.vx;
+
+        s.y +=
+            s.vy;
+
+
+        s.size +=
+            0.25;
+
+
+        s.life -=
+            s.decay;
+
+
+        ctx.fillStyle =
+            `rgba(
+                80,
+                70,
+                60,
+                ${s.life * 0.08}
+            )`;
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            s.x,
+            s.y,
+            s.size,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+
+        if (
+            s.life <= 0
+        ) {
+
+            smoke.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   HEAT DISTORTION
+===================================================== */
+
+function drawHeat() {
+
+    const radius =
+        160 *
+        fire.intensity;
+
+
+    const heat =
+        ctx.createRadialGradient(
+
+            fire.x,
+            fire.y - 50,
+
+            10,
+
+            fire.x,
+            fire.y - 50,
+
+            radius
+
+        );
+
+
+    heat.addColorStop(
+        0,
+        "rgba(255,100,20,0.12)"
+    );
+
+    heat.addColorStop(
+        0.4,
+        "rgba(255,60,0,0.05)"
+    );
+
+    heat.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        heat;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        fire.x,
+        fire.y - 50,
+        radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+}
+
+
+/* =====================================================
+   GROUND GLOW
+===================================================== */
+
+function drawGroundGlow() {
+
+    const glow =
+        ctx.createRadialGradient(
+
+            fire.x,
+            H * 0.82,
+
+            0,
+
+            fire.x,
+            H * 0.82,
+
+            260
+
+        );
+
+
+    glow.addColorStop(
+        0,
+        "rgba(255,80,0,0.3)"
+    );
+
+    glow.addColorStop(
+        0.35,
+        "rgba(255,40,0,0.1)"
+    );
+
+    glow.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    ctx.fillStyle =
+        glow;
+
+
+    ctx.fillRect(
+        0,
+        H * 0.65,
+        W,
+        H * 0.35
+    );
+
+}
+
+
+/* =====================================================
+   VIGNETTE
+===================================================== */
+
+function drawVignette() {
+
+    const gradient =
+        ctx.createRadialGradient(
+
+            W / 2,
+            H / 2,
+            H * 0.15,
+
+            W / 2,
+            H / 2,
+
+            Math.max(
+                W,
+                H
+            ) * 0.75
+
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "rgba(0,0,0,0)"
+    );
+
+    gradient.addColorStop(
+        0.65,
+        "rgba(0,0,0,0.12)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgba(0,0,0,0.8)"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =====================================================
+   ANIMATION
+===================================================== */
+
+let last =
+    performance.now();
+
+
+function animate(
+    timestamp
+) {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    const time =
+        timestamp / 1000;
+
+
+    /*
+     * Smooth movement.
+     */
+
+    fire.x +=
+        (
+            fire.targetX -
+            fire.x
+        ) * 0.08;
+
+
+    fire.y +=
+        (
+            fire.targetY -
+            fire.y
+        ) * 0.08;
+
+
+    fire.intensity +=
+        (
+            fire.targetIntensity -
+            fire.intensity
+        ) * 0.08;
+
+
+    /*
+     * Generate flames.
+     */
+
+    const amount =
+        Math.floor(
+            10 *
+            fire.intensity
+        );
+
+
+    for (
+        let i = 0;
+        i < amount;
+        i++
+    ) {
+
+        createFlame();
+
+    }
+
+
+    /*
+     * Sparks.
+     */
+
+    if (
+        Math.random() <
+        0.12 *
+        fire.intensity
+    ) {
+
+        createSpark(
+            fire.x +
+            random(
+                -35,
+                35
+            ),
+
+            fire.y +
+            random(
+                -15,
+                5
+            ),
+
+            random(
+                0.5,
+                1.2
+            )
+        );
+
+    }
+
+
+    /*
+     * Smoke.
+     */
+
+    if (
+        Math.random() <
+        0.15
+    ) {
+
+        createSmoke();
+
+    }
+
+
+    /*
+     * Draw.
+     */
+
+    drawBackground(
+        time
+    );
+
+    drawGroundGlow();
+
+    drawHeat();
+
+    drawLogs(
+        time
+    );
+
+    updateSmoke();
+
+    updateFlames();
+
+    updateSparks();
+
+    drawVignette();
+
+
+    /*
+     * Return to normal.
+     */
+
+    if (
+        fire.targetIntensity >
+        1
+    ) {
+
+        fire.targetIntensity *=
+            0.96;
+
+        if (
+            fire.targetIntensity <
+            1
+        ) {
+
+            fire.targetIntensity =
+                1;
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   START
+===================================================== */
+
+resize();
+
+requestAnimationFrame(
+    animate
+);
+
+</script>
+
+</body>
+
+</html>
