@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               maximum-scale=1.0,
+               user-scalable=no">
+
+<title>Neon Ocean</title>
+
+<style>
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #00020a;
+    touch-action: none;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#hint {
+    position: fixed;
+
+    bottom: 30px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 20;
+
+    color: rgba(150,200,255,.5);
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 10px;
+
+    letter-spacing: 4px;
+
+    text-transform: uppercase;
+
+    pointer-events: none;
+
+    transition:
+        opacity 1s ease;
+}
+
+</style>
+
+
+<script type="importmap">
+
+{
+    "imports": {
+        "three":
+        "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    }
+}
+
+</script>
+
+</head>
+
+
+<body>
+
+
+<div id="hint">
+    Move • Touch • Explore
+</div>
+
+
+<script type="module">
+
+import * as THREE
+from "three";
+
+
+/* ============================================================
+   SCENE
+============================================================ */
+
+const scene =
+    new THREE.Scene();
+
+scene.background =
+    new THREE.Color(
+        0x00030c
+    );
+
+scene.fog =
+    new THREE.FogExp2(
+        0x00030c,
+        0.035
+    );
+
+
+/* ============================================================
+   CAMERA
+============================================================ */
+
+const camera =
+    new THREE.PerspectiveCamera(
+        48,
+        window.innerWidth /
+        window.innerHeight,
+        0.1,
+        100
+    );
+
+camera.position.set(
+    0,
+    0,
+    11
+);
+
+
+/* ============================================================
+   RENDERER
+============================================================ */
+
+const renderer =
+    new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference:
+            "high-performance"
+    });
+
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
+
+renderer.setPixelRatio(
+    Math.min(
+        window.devicePixelRatio,
+        2
+    )
+);
+
+renderer.outputColorSpace =
+    THREE.SRGBColorSpace;
+
+document.body.appendChild(
+    renderer.domElement
+);
+
+
+/* ============================================================
+   LIGHTING
+============================================================ */
+
+scene.add(
+    new THREE.AmbientLight(
+        0x07152e,
+        0.7
+    )
+);
+
+
+const blueLight =
+    new THREE.PointLight(
+        0x0066ff,
+        100,
+        25
+    );
+
+blueLight.position.set(
+    -3,
+    0,
+    5
+);
+
+scene.add(
+    blueLight
+);
+
+
+const blueLight2 =
+    new THREE.PointLight(
+        0x003cff,
+        70,
+        20
+    );
+
+blueLight2.position.set(
+    4,
+    3,
+    2
+);
+
+scene.add(
+    blueLight2
+);
+
+
+/* ============================================================
+   GLOW TEXTURE
+============================================================ */
+
+function createGlowTexture() {
+
+    const canvas =
+        document.createElement(
+            "canvas"
+        );
+
+    canvas.width = 256;
+    canvas.height = 256;
+
+    const ctx =
+        canvas.getContext(
+            "2d"
+        );
+
+    const gradient =
+        ctx.createRadialGradient(
+            128,
+            128,
+            0,
+            128,
+            128,
+            128
+        );
+
+    gradient.addColorStop(
+        0,
+        "rgba(30,140,255,1)"
+    );
+
+    gradient.addColorStop(
+        .15,
+        "rgba(0,100,255,.85)"
+    );
+
+    gradient.addColorStop(
+        .4,
+        "rgba(0,60,255,.35)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+    ctx.fillStyle =
+        gradient;
+
+    ctx.fillRect(
+        0,
+        0,
+        256,
+        256
+    );
+
+    return new THREE.CanvasTexture(
+        canvas
+    );
+}
+
+
+const glowTexture =
+    createGlowTexture();
+
+
+/* ============================================================
+   JELLYFISH CLASS
+============================================================ */
+
+class Jellyfish {
+
+    constructor(
+        x,
+        y,
+        z,
+        scale,
+        opacity
+    ) {
+
+        this.group =
+            new THREE.Group();
+
+        this.group.position.set(
+            x,
+            y,
+            z
+        );
+
+        this.baseX = x;
+        this.baseY = y;
+        this.baseZ = z;
+
+        this.velocity =
+            new THREE.Vector3();
+
+        this.scale =
+            scale;
+
+        this.phase =
+            Math.random() * 20;
+
+        this.speed =
+            0.5 +
+            Math.random() * 0.8;
+
+        this.opacity =
+            opacity;
+
+        this.tentacles = [];
+
+        this.particles = [];
+
+        this.interaction =
+            0;
+
+        scene.add(
+            this.group
+        );
+
+        this.createBody();
+
+        this.createGlow();
+
+        this.createTentacles();
+
+        this.createParticles();
+    }
+
+
+    /* ========================================================
+       BODY
+    ======================================================== */
+
+    createBody() {
+
+        const geometry =
+            new THREE.SphereGeometry(
+                1.35,
+                48,
+                28,
+                0,
+                Math.PI * 2,
+                0,
+                Math.PI * .56
+            );
+
+
+        const material =
+            new THREE.MeshPhysicalMaterial({
+
+                color:
+                    0x087cff,
+
+                emissive:
+                    0x004cff,
+
+                emissiveIntensity:
+                    3.2,
+
+                roughness:
+                    .08,
+
+                metalness:
+                    .05,
+
+                transparent:
+                    true,
+
+                opacity:
+                    .7 *
+                    this.opacity,
+
+                transmission:
+                    .3,
+
+                thickness:
+                    .8,
+
+                side:
+                    THREE.DoubleSide
+            });
+
+
+        this.body =
+            new THREE.Mesh(
+                geometry,
+                material
+            );
+
+
+        this.body.scale.set(
+            1.55,
+            .72,
+            1
+        );
+
+
+        this.group.add(
+            this.body
+        );
+
+
+        /* Inner light */
+
+        const innerGeometry =
+            new THREE.SphereGeometry(
+                1.1,
+                32,
+                20,
+                0,
+                Math.PI * 2,
+                0,
+                Math.PI * .52
+            );
+
+
+        const innerMaterial =
+            new THREE.MeshBasicMaterial({
+
+                color:
+                    0x168cff,
+
+                transparent:
+                    true,
+
+                opacity:
+                    .16 *
+                    this.opacity,
+
+                blending:
+                    THREE.AdditiveBlending
+            });
+
+
+        const inner =
+            new THREE.Mesh(
+                innerGeometry,
+                innerMaterial
+            );
+
+
+        inner.scale.set(
+            1.5,
+            .72,
+            1
+        );
+
+
+        this.group.add(
+            inner
+        );
+
+
+        /* Rim */
+
+        const rimGeometry =
+            new THREE.TorusGeometry(
+                1.15,
+                .035,
+                8,
+                64
+            );
+
+
+        const rimMaterial =
+            new THREE.MeshBasicMaterial({
+                color:
+                    0x29a0ff
+            });
+
+
+        const rim =
+            new THREE.Mesh(
+                rimGeometry,
+                rimMaterial
+            );
+
+
+        rim.rotation.x =
+            Math.PI / 2;
+
+        rim.scale.set(
+            1.45,
+            .68,
+            1
+        );
+
+        rim.position.y =
+            -.03;
+
+        this.group.add(
+            rim
+        );
+
+
+        this.rim =
+            rim;
+    }
+
+
+    /* ========================================================
+       GLOW
+    ======================================================== */
+
+    createGlow() {
+
+        const material =
+            new THREE.SpriteMaterial({
+
+                map:
+                    glowTexture,
+
+                color:
+                    0x0066ff,
+
+                transparent:
+                    true,
+
+                opacity:
+                    .45 *
+                    this.opacity,
+
+                blending:
+                    THREE.AdditiveBlending,
+
+                depthWrite:
+                    false
+            });
+
+
+        const glow =
+            new THREE.Sprite(
+                material
+            );
+
+
+        glow.scale.set(
+            4.8,
+            3.8,
+            1
+        );
+
+
+        glow.position.z =
+            -.5;
+
+
+        this.group.add(
+            glow
+        );
+
+
+        this.glow =
+            glow;
+    }
+
+
+    /* ========================================================
+       TENTACLES
+    ======================================================== */
+
+    createTentacles() {
+
+        const count =
+            14 +
+            Math.floor(
+                Math.random() * 8
+            );
+
+
+        for (
+            let i = 0;
+            i < count;
+            i++
+        ) {
+
+            const points = [];
+
+
+            const startX =
+                (
+                    i -
+                    count / 2
+                ) *
+                .15;
+
+
+            const depth =
+                (
+                    Math.random() -
+                    .5
+                ) *
+                .5;
+
+
+            const length =
+                3 +
+                Math.random() *
+                2;
+
+
+            for (
+                let j = 0;
+                j < 28;
+                j++
+            ) {
+
+                const p =
+                    j / 27;
+
+
+                const y =
+                    -p *
+                    length;
+
+
+                const curve =
+                    Math.sin(
+                        p * 7 +
+                        i * .8 +
+                        this.phase
+                    ) *
+                    .22 *
+                    p;
+
+
+                const curve2 =
+                    Math.sin(
+                        p * 17 +
+                        i
+                    ) *
+                    .07 *
+                    p;
+
+
+                points.push(
+                    new THREE.Vector3(
+                        startX +
+                        curve +
+                        curve2,
+
+                        y,
+
+                        depth
+                    )
+                );
+            }
+
+
+            const geometry =
+                new THREE.BufferGeometry();
+
+
+            const positions =
+                new Float32Array(
+                    points.length * 3
+                );
+
+
+            points.forEach(
+                (point, index) => {
+
+                    positions[
+                        index * 3
+                    ] =
+                        point.x;
+
+                    positions[
+                        index * 3 + 1
+                    ] =
+                        point.y;
+
+                    positions[
+                        index * 3 + 2
+                    ] =
+                        point.z;
+                }
+            );
+
+
+            geometry.setAttribute(
+                "position",
+
+                new THREE.BufferAttribute(
+                    positions,
+                    3
+                )
+            );
+
+
+            const material =
+                new THREE.LineBasicMaterial({
+
+                    color:
+                        0x087cff,
+
+                    transparent:
+                        true,
+
+                    opacity:
+                        .8 *
+                        this.opacity,
+
+                    blending:
+                        THREE.AdditiveBlending
+                });
+
+
+            const line =
+                new THREE.Line(
+                    geometry,
+                    material
+                );
+
+
+            this.group.add(
+                line
+            );
+
+
+            this.tentacles.push({
+
+                line:
+                    line,
+
+                original:
+                    points,
+
+                index:
+                    i
+            });
+        }
+    }
+
+
+    /* ========================================================
+       MINI PARTICLES
+    ======================================================== */
+
+    createParticles() {
+
+        for (
+            let i = 0;
+            i < 10;
+            i++
+        ) {
+
+            const material =
+                new THREE.SpriteMaterial({
+
+                    map:
+                        glowTexture,
+
+                    color:
+                        0x168cff,
+
+                    transparent:
+                        true,
+
+                    opacity:
+                        .4,
+
+                    blending:
+                        THREE.AdditiveBlending,
+
+                    depthWrite:
+                        false
+                });
+
+
+            const particle =
+                new THREE.Sprite(
+                    material
+                );
+
+
+            particle.position.set(
+                (
+                    Math.random() -
+                    .5
+                ) * 2.5,
+
+                -Math.random() * 3,
+
+                (
+                    Math.random() -
+                    .5
+                ) * 1.5
+            );
+
+
+            const size =
+                .04 +
+                Math.random() * .12;
+
+
+            particle.scale.set(
+                size,
+                size,
+                1
+            );
+
+
+            this.group.add(
+                particle
+            );
+
+
+            this.particles.push({
+
+                mesh:
+                    particle,
+
+                phase:
+                    Math.random() * 10
+            });
+        }
+    }
+
+
+    /* ========================================================
+       UPDATE
+    ======================================================== */
+
+    update(
+        time,
+        pointerWorld
+    ) {
+
+        /* Natural movement */
+
+        const naturalX =
+            this.baseX +
+            Math.sin(
+                time *
+                .35 *
+                this.speed +
+                this.phase
+            ) *
+            .45;
+
+
+        const naturalY =
+            this.baseY +
+            Math.sin(
+                time *
+                .55 *
+                this.speed +
+                this.phase
+            ) *
+            .35;
+
+
+        /* Distance from pointer */
+
+        const dx =
+            this.group.position.x -
+            pointerWorld.x;
+
+
+        const dy =
+            this.group.position.y -
+            pointerWorld.y;
+
+
+        const distance =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+
+        /*
+         * Every jellyfish reacts.
+         *
+         * Close = strong reaction
+         * Far = weak reaction
+         */
+
+        const influence =
+            Math.max(
+                0,
+                1 -
+                distance / 5
+            );
+
+
+        /* Push away from touch */
+
+        if (
+            influence > 0
+        ) {
+
+            const force =
+                influence *
+                influence *
+                .035;
+
+
+            this.velocity.x +=
+                dx *
+                force;
+
+
+            this.velocity.y +=
+                dy *
+                force;
+
+
+            this.interaction =
+                Math.min(
+                    1,
+                    this.interaction +
+                    influence *
+                    .04
+                );
+        }
+
+
+        /* Spring back */
+
+        this.velocity.x +=
+            (
+                naturalX -
+                this.group.position.x
+            ) *
+            .002;
+
+
+        this.velocity.y +=
+            (
+                naturalY -
+                this.group.position.y
+            ) *
+            .002;
+
+
+        /* Friction */
+
+        this.velocity.multiplyScalar(
+            .94
+        );
+
+
+        this.group.position.x +=
+            this.velocity.x;
+
+
+        this.group.position.y +=
+            this.velocity.y;
+
+
+        /* Pulse */
+
+        const pulse =
+            Math.sin(
+                time *
+                2.2 +
+                this.phase
+            );
+
+
+        const reaction =
+            this.interaction;
+
+
+        this.body.scale.x =
+            1.55 +
+            pulse *
+            .04 +
+            reaction *
+            .18;
+
+
+        this.body.scale.y =
+            .72 -
+            pulse *
+            .03 -
+            reaction *
+            .08;
+
+
+        /* Rotation */
+
+        this.group.rotation.z =
+            Math.sin(
+                time *
+                .5 +
+                this.phase
+            ) *
+            .05;
+
+
+        this.group.rotation.y =
+            Math.sin(
+                time *
+                .35 +
+                this.phase
+            ) *
+            .08;
+
+
+        /* Glow */
+
+        this.glow.material.opacity =
+            (
+                .38 +
+                pulse *
+                .06 +
+                reaction *
+                .35
+            ) *
+            this.opacity;
+
+
+        this.glow.scale.set(
+            4.8 +
+            reaction * 1.8,
+
+            3.8 +
+            reaction * 1.3,
+
+            1
+        );
+
+
+        /* Tentacles */
+
+        this.tentacles.forEach(
+            (t) => {
+
+                const pos =
+                    t.line.geometry
+                    .attributes
+                    .position
+                    .array;
+
+
+                t.original.forEach(
+                    (
+                        point,
+                        index
+                    ) => {
+
+                        const p =
+                            index / 27;
+
+
+                        const wave =
+                            Math.sin(
+                                time *
+                                (
+                                    1.5 +
+                                    reaction *
+                                    3
+                                ) +
+                                p * 8 +
+                                t.index
+                            ) *
+                            (
+                                .2 +
+                                reaction *
+                                .25
+                            ) *
+                            p;
+
+
+                        const wave2 =
+                            Math.sin(
+                                time * 3 +
+                                p * 15 +
+                                t.index
+                            ) *
+                            .07 *
+                            p;
+
+
+                        pos[
+                            index * 3
+                        ] =
+                            point.x +
+                            wave +
+                            wave2;
+
+
+                        pos[
+                            index * 3 + 2
+                        ] =
+                            point.z +
+                            Math.sin(
+                                time +
+                                p * 8
+                            ) *
+                            .08 *
+                            p;
+                    }
+                );
+
+
+                t.line.geometry
+                .attributes
+                .position
+                .needsUpdate =
+                    true;
+            }
+        );
+
+
+        /* Small particles */
+
+        this.particles.forEach(
+            (p) => {
+
+                p.mesh.position.y +=
+                    Math.sin(
+                        time +
+                        p.phase
+                    ) *
+                    .001;
+            }
+        );
+
+
+        /* Recover interaction */
+
+        this.interaction *=
+            .94;
+    }
+}
+
+
+/* ============================================================
+   CREATE MANY JELLYFISH
+============================================================ */
+
+const jellyfish = [];
+
+
+const jellyData = [
+
+    [-4.2,  2.5, -5.5, .28, .30],
+
+    [-2.8,  1.1, -3.5, .42, .50],
+
+    [-1.3,  2.8, -5.0, .22, .35],
+
+    [ 0.2,  2.0, -4.0, .30, .45],
+
+    [ 2.4,  2.8, -5.5, .22, .30],
+
+    [ 3.8,  1.2, -4.5, .35, .45],
+
+    [ 4.1, -1.8, -4.5, .28, .40],
+
+    [ 2.8, -2.4, -2.5, .48, .60],
+
+    [ 0.8, -2.6, -4.0, .30, .40],
+
+    [-1.8, -2.7, -3.0, .42, .50],
+
+    [-3.8, -1.5, -4.0, .30, .40],
+
+    [ 3.5,  3.0, -7.0, .18, .25]
+];
+
+
+jellyData.forEach(
+    (data) => {
+
+        jellyfish.push(
+            new Jellyfish(
+                ...data
+            )
+        );
+    }
+);
+
+
+/* ============================================================
+   MAIN LARGE JELLYFISH
+============================================================ */
+
+const hero =
+    new Jellyfish(
+        -1.5,
+        -0.6,
+        0,
+        1.35,
+        1
+    );
+
+
+jellyfish.push(
+    hero
+);
+
+
+/* ============================================================
+   BACKGROUND PARTICLES
+============================================================ */
+
+const particleCount =
+    2200;
+
+
+const particlePositions =
+    new Float32Array(
+        particleCount * 3
+    );
+
+
+for (
+    let i = 0;
+    i < particleCount;
+    i++
+) {
+
+    particlePositions[
+        i * 3
+    ] =
+        (
+            Math.random() -
+            .5
+        ) * 20;
+
+
+    particlePositions[
+        i * 3 + 1
+    ] =
+        (
+            Math.random() -
+            .5
+        ) * 15;
+
+
+    particlePositions[
+        i * 3 + 2
+    ] =
+        (
+            Math.random() -
+            .5
+        ) * 15;
+}
+
+
+const particleGeometry =
+    new THREE.BufferGeometry();
+
+
+particleGeometry.setAttribute(
+    "position",
+
+    new THREE.BufferAttribute(
+        particlePositions,
+        3
+    )
+);
+
+
+const particleMaterial =
+    new THREE.PointsMaterial({
+
+        color:
+            0x168cff,
+
+        size:
+            .022,
+
+        transparent:
+            true,
+
+        opacity:
+            .55,
+
+        blending:
+            THREE.AdditiveBlending,
+
+        depthWrite:
+            false
+    });
+
+
+const backgroundParticles =
+    new THREE.Points(
+        particleGeometry,
+        particleMaterial
+    );
+
+
+scene.add(
+    backgroundParticles
+);
+
+
+/* ============================================================
+   POINTER
+============================================================ */
+
+const pointer =
+    new THREE.Vector2(
+        0,
+        0
+    );
+
+
+const pointerTarget =
+    new THREE.Vector2(
+        0,
+        0
+    );
+
+
+let active =
+    false;
+
+
+/* ============================================================
+   RAYCASTER
+============================================================ */
+
+const raycaster =
+    new THREE.Raycaster();
+
+
+const pointerPlane =
+    new THREE.Plane(
+        new THREE.Vector3(
+            0,
+            0,
+            1
+        ),
+        0
+    );
+
+
+const pointerWorld =
+    new THREE.Vector3();
+
+
+/* ============================================================
+   POINTER POSITION
+============================================================ */
+
+function updatePointer(
+    event
+) {
+
+    pointerTarget.x =
+        (
+            event.clientX /
+            window.innerWidth
+        ) *
+        2 -
+        1;
+
+
+    pointerTarget.y =
+        -(
+            event.clientY /
+            window.innerHeight
+        ) *
+        2 +
+        1;
+
+
+    raycaster.setFromCamera(
+        pointerTarget,
+        camera
+    );
+
+
+    raycaster.ray.intersectPlane(
+        pointerPlane,
+        pointerWorld
+    );
+}
+
+
+/* ============================================================
+   POINTER DOWN
+============================================================ */
+
+window.addEventListener(
+    "pointerdown",
+    (event) => {
+
+        active = true;
+
+        updatePointer(
+            event
+        );
+
+
+        document.getElementById(
+            "hint"
+        ).style.opacity =
+            "0";
+
+
+        createRipple(
+            pointerWorld.x,
+            pointerWorld.y
+        );
+    }
+);
+
+
+/* ============================================================
+   POINTER MOVE
+============================================================ */
+
+window.addEventListener(
+    "pointermove",
+    (event) => {
+
+        updatePointer(
+            event
+        );
+
+        /*
+         * Keep interaction active
+         * while dragging.
+         */
+
+        if (
+            active
+        ) {
+
+            createRipple(
+                pointerWorld.x,
+                pointerWorld.y,
+                true
+            );
+        }
+    }
+);
+
+
+/* ============================================================
+   POINTER UP
+============================================================ */
+
+window.addEventListener(
+    "pointerup",
+    () => {
+
+        active = false;
+    }
+);
+
+
+/* ============================================================
+   RIPPLE SYSTEM
+============================================================ */
+
+const ripples = [];
+
+
+function createRipple(
+    x,
+    y,
+    small = false
+) {
+
+    const geometry =
+        new THREE.RingGeometry(
+            .03,
+            .06,
+            64
+        );
+
+
+    const material =
+        new THREE.MeshBasicMaterial({
+
+            color:
+                0x168cff,
+
+            transparent:
+                true,
+
+            opacity:
+                small ?
+                .35 :
+                .9,
+
+            side:
+                THREE.DoubleSide,
+
+            blending:
+                THREE.AdditiveBlending,
+
+            depthWrite:
+                false
+        });
+
+
+    const ring =
+        new THREE.Mesh(
+            geometry,
+            material
+        );
+
+
+    ring.position.set(
+        x,
+        y,
+        1
+    );
+
+
+    scene.add(
+        ring
+    );
+
+
+    ripples.push({
+
+        mesh:
+            ring,
+
+        life:
+            1,
+
+        size:
+            small ?
+            .05 :
+            .1
+    });
+}
+
+
+/* ============================================================
+   ANIMATE RIPPLES
+============================================================ */
+
+function updateRipples() {
+
+    for (
+        let i =
+            ripples.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const ripple =
+            ripples[i];
+
+
+        ripple.size +=
+            .035;
+
+
+        ripple.mesh.scale.set(
+            ripple.size,
+            ripple.size,
+            1
+        );
+
+
+        ripple.life *=
+            .95;
+
+
+        ripple.mesh.material.opacity =
+            ripple.life;
+
+
+        if (
+            ripple.life <
+            .01
+        ) {
+
+            scene.remove(
+                ripple.mesh
+            );
+
+            ripple.mesh.geometry
+                .dispose();
+
+            ripple.mesh.material
+                .dispose();
+
+            ripples.splice(
+                i,
+                1
+            );
+        }
+    }
+}
+
+
+/* ============================================================
+   CAMERA
+============================================================ */
+
+const clock =
+    new THREE.Clock();
+
+
+function animate() {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    const time =
+        clock.getElapsedTime();
+
+
+    /* Smooth pointer */
+
+    pointer.lerp(
+        pointerTarget,
+        .08
+    );
+
+
+    /* Recalculate world position */
+
+    raycaster.setFromCamera(
+        pointer,
+        camera
+    );
+
+
+    raycaster.ray.intersectPlane(
+        pointerPlane,
+        pointerWorld
+    );
+
+
+    /* ========================================================
+       ALL JELLYFISH INTERACT
+    ======================================================== */
+
+    jellyfish.forEach(
+        (jelly) => {
+
+            jelly.update(
+                time,
+                pointerWorld
+            );
+        }
+    );
+
+
+    /* ========================================================
+       CAMERA PARALLAX
+    ======================================================== */
+
+    camera.position.x +=
+        (
+            pointer.x *
+            .7 -
+            camera.position.x
+        ) *
+        .025;
+
+
+    camera.position.y +=
+        (
+            pointer.y *
+            .45 -
+            camera.position.y
+        ) *
+        .025;
+
+
+    camera.lookAt(
+        0,
+        -.3,
+        0
+    );
+
+
+    /* ========================================================
+       BACKGROUND MOVEMENT
+    ======================================================== */
+
+    backgroundParticles.rotation.y =
+        time *
+        .008;
+
+
+    backgroundParticles.rotation.x =
+        Math.sin(
+            time *
+            .12
+        ) *
+        .05;
+
+
+    /* ========================================================
+       LIGHT FOLLOWS POINTER
+    ======================================================== */
+
+    blueLight.position.x =
+        -3 +
+        pointer.x *
+        5;
+
+
+    blueLight.position.y =
+        pointer.y *
+        4;
+
+
+    /* ========================================================
+       RIPPLE UPDATE
+    ======================================================== */
+
+    updateRipples();
+
+
+    /* ========================================================
+       RENDER
+    ======================================================== */
+
+    renderer.render(
+        scene,
+        camera
+    );
+}
+
+
+animate();
+
+
+/* ============================================================
+   RESIZE
+============================================================ */
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        camera.aspect =
+            window.innerWidth /
+            window.innerHeight;
+
+
+        camera.updateProjectionMatrix();
+
+
+        renderer.setSize(
+            window.innerWidth,
+            window.innerHeight
+        );
+    }
+);
+
+</script>
+
+</body>
+
+</html>
