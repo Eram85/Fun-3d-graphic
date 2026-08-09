@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Neural Network</title>
+
+<style>
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    background: #02040a;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    touch-action: none;
+}
+
+canvas {
+
+    position: fixed;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: block;
+}
+
+.title {
+
+    position: fixed;
+
+    top: 32px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    color:
+        rgba(100,220,255,0.7);
+
+    font-size: 11px;
+
+    letter-spacing: 10px;
+
+    z-index: 10;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+
+}
+
+.subtitle {
+
+    position: fixed;
+
+    top: 59px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    color:
+        rgba(100,200,255,0.3);
+
+    font-size: 8px;
+
+    letter-spacing: 5px;
+
+    z-index: 10;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+
+}
+
+.instruction {
+
+    position: fixed;
+
+    bottom: 30px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    color:
+        rgba(120,210,255,0.4);
+
+    font-size: 9px;
+
+    letter-spacing: 5px;
+
+    z-index: 10;
+
+    pointer-events: none;
+
+    white-space: nowrap;
+
+}
+
+.info {
+
+    position: fixed;
+
+    top: 28px;
+
+    left: 28px;
+
+    color:
+        rgba(120,210,255,0.3);
+
+    font-size: 8px;
+
+    line-height: 2;
+
+    letter-spacing: 3px;
+
+    pointer-events: none;
+
+    z-index: 10;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+
+<div class="title">
+    NEURAL NETWORK
+</div>
+
+<div class="subtitle">
+    ARTIFICIAL INTELLIGENCE // LIVE
+</div>
+
+<div class="info">
+
+    NODES <span id="nodeCount">0</span><br>
+
+    SIGNALS <span id="signalCount">0</span><br>
+
+    ACTIVITY <span id="activity">0</span>%
+
+</div>
+
+<div class="instruction">
+    MOVE • TOUCH • ACTIVATE
+</div>
+
+
+<canvas id="canvas"></canvas>
+
+
+<script>
+
+/* =========================================================
+   CANVAS
+========================================================= */
+
+const canvas =
+    document.getElementById(
+        "canvas"
+    );
+
+const ctx =
+    canvas.getContext(
+        "2d"
+    );
+
+
+let W =
+    window.innerWidth;
+
+let H =
+    window.innerHeight;
+
+let DPR =
+    Math.min(
+        window.devicePixelRatio || 1,
+        2
+    );
+
+
+function resize() {
+
+    W =
+        window.innerWidth;
+
+    H =
+        window.innerHeight;
+
+    DPR =
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
+
+    canvas.width =
+        W * DPR;
+
+    canvas.height =
+        H * DPR;
+
+    canvas.style.width =
+        W + "px";
+
+    canvas.style.height =
+        H + "px";
+
+    ctx.setTransform(
+        DPR,
+        0,
+        0,
+        DPR,
+        0,
+        0
+    );
+
+    createNetwork();
+
+}
+
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+
+/* =========================================================
+   POINTER
+========================================================= */
+
+const pointer = {
+
+    x:
+        W / 2,
+
+    y:
+        H / 2,
+
+    targetX:
+        W / 2,
+
+    targetY:
+        H / 2,
+
+    down:
+        false
+
+};
+
+
+window.addEventListener(
+    "pointermove",
+    e => {
+
+        pointer.targetX =
+            e.clientX;
+
+        pointer.targetY =
+            e.clientY;
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerdown",
+    e => {
+
+        pointer.down =
+            true;
+
+        pointer.targetX =
+            e.clientX;
+
+        pointer.targetY =
+            e.clientY;
+
+        activateNearest(
+            e.clientX,
+            e.clientY
+        );
+
+    }
+);
+
+
+window.addEventListener(
+    "pointerup",
+    () => {
+
+        pointer.down =
+            false;
+
+    }
+);
+
+
+/* =========================================================
+   NETWORK
+========================================================= */
+
+let layers = [];
+
+let connections = [];
+
+let signals = [];
+
+
+/*
+ * Number of neurons in each layer.
+ */
+
+const architecture = [
+
+    6,
+    9,
+    12,
+    10,
+    7,
+    4
+
+];
+
+
+/* =========================================================
+   CREATE NETWORK
+========================================================= */
+
+function createNetwork() {
+
+    layers = [];
+
+    connections = [];
+
+    signals = [];
+
+
+    const totalWidth =
+        W * 0.72;
+
+
+    const startX =
+        W * 0.14;
+
+
+    const spacing =
+        totalWidth /
+        (
+            architecture.length -
+            1
+        );
+
+
+    /*
+     * Create neurons.
+     */
+
+    architecture.forEach(
+        (count, layerIndex) => {
+
+            const layer = [];
+
+            const centerY =
+                H / 2;
+
+
+            const verticalSpace =
+                Math.min(
+                    H * 0.65,
+                    620
+                );
+
+
+            for (
+                let i = 0;
+                i < count;
+                i++
+            ) {
+
+                const normalized =
+                    count === 1
+                        ? 0.5
+                        : i /
+                          (
+                            count -
+                            1
+                          );
+
+
+                const y =
+                    centerY -
+                    verticalSpace / 2 +
+                    normalized *
+                    verticalSpace;
+
+
+                /*
+                 * Add slight organic
+                 * movement.
+                 */
+
+                layer.push({
+
+                    x:
+                        startX +
+                        layerIndex *
+                        spacing,
+
+                    y:
+                        y,
+
+                    baseY:
+                        y,
+
+                    layer:
+                        layerIndex,
+
+                    index:
+                        i,
+
+                    radius:
+                        layerIndex ===
+                        0
+                            ? 6
+                            : 5,
+
+                    activation:
+                        Math.random(),
+
+                    targetActivation:
+                        Math.random(),
+
+                    phase:
+                        Math.random() *
+                        Math.PI *
+                        2
+
+                });
+
+            }
+
+
+            layers.push(
+                layer
+            );
+
+        }
+    );
+
+
+    /*
+     * Create connections
+     * between every adjacent
+     * layer.
+     */
+
+    for (
+        let l = 0;
+
+        l <
+        layers.length - 1;
+
+        l++
+    ) {
+
+        const current =
+            layers[l];
+
+        const next =
+            layers[l + 1];
+
+
+        current.forEach(
+            a => {
+
+                next.forEach(
+                    b => {
+
+                        connections.push({
+
+                            a:
+                                a,
+
+                            b:
+                                b,
+
+                            strength:
+                                Math.random(),
+
+                            pulse:
+                                0
+
+                        });
+
+                    }
+                );
+
+            }
+        );
+
+    }
+
+
+    /*
+     * Update UI.
+     */
+
+    document.getElementById(
+        "nodeCount"
+    ).textContent =
+        architecture.reduce(
+            (
+                sum,
+                n
+            ) =>
+                sum + n,
+            0
+        );
+
+}
+
+
+/* =========================================================
+   ACTIVATE NEAREST
+========================================================= */
+
+function activateNearest(
+    x,
+    y
+) {
+
+    let closest =
+        null;
+
+    let closestDistance =
+        Infinity;
+
+
+    layers.forEach(
+        layer => {
+
+            layer.forEach(
+                node => {
+
+                    const dx =
+                        node.x -
+                        x;
+
+                    const dy =
+                        node.y -
+                        y;
+
+                    const distance =
+                        Math.sqrt(
+                            dx * dx +
+                            dy * dy
+                        );
+
+
+                    if (
+                        distance <
+                        closestDistance
+                    ) {
+
+                        closest =
+                            node;
+
+                        closestDistance =
+                            distance;
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+    if (
+        closest
+    ) {
+
+        closest.activation =
+            1;
+
+        closest.targetActivation =
+            1;
+
+
+        /*
+         * Create a signal from
+         * this neuron.
+         */
+
+        propagate(
+            closest
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   PROPAGATE SIGNAL
+========================================================= */
+
+function propagate(
+    node
+) {
+
+    /*
+     * Find outgoing connections.
+     */
+
+    connections.forEach(
+        connection => {
+
+            if (
+                connection.a ===
+                node
+            ) {
+
+                connection.pulse =
+                    1;
+
+
+                signals.push({
+
+                    connection:
+                        connection,
+
+                    progress:
+                        0,
+
+                    speed:
+                        0.012 +
+                        Math.random() *
+                        0.018,
+
+                    size:
+                        Math.random() *
+                        2 +
+                        1
+
+                });
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   AUTOMATIC SIGNALS
+========================================================= */
+
+function randomActivation() {
+
+    /*
+     * Start from input layer.
+     */
+
+    const input =
+        layers[0];
+
+
+    const node =
+        input[
+            Math.floor(
+                Math.random() *
+                input.length
+            )
+        ];
+
+
+    node.activation =
+        1;
+
+    node.targetActivation =
+        1;
+
+
+    propagate(
+        node
+    );
+
+}
+
+
+/* =========================================================
+   DRAW BACKGROUND
+========================================================= */
+
+function drawBackground() {
+
+    const gradient =
+        ctx.createRadialGradient(
+
+            W / 2,
+            H / 2,
+            0,
+
+            W / 2,
+            H / 2,
+            Math.max(
+                W,
+                H
+            )
+
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "#07141d"
+    );
+
+    gradient.addColorStop(
+        0.4,
+        "#030a11"
+    );
+
+    gradient.addColorStop(
+        1,
+        "#010207"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+}
+
+
+/* =========================================================
+   BACKGROUND GRID
+========================================================= */
+
+function drawGrid() {
+
+    const spacing =
+        40;
+
+
+    ctx.strokeStyle =
+        "rgba(70,160,200,0.025)";
+
+    ctx.lineWidth =
+        1;
+
+
+    for (
+        let x = 0;
+        x < W;
+        x += spacing
+    ) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            x,
+            0
+        );
+
+        ctx.lineTo(
+            x,
+            H
+        );
+
+        ctx.stroke();
+
+    }
+
+
+    for (
+        let y = 0;
+        y < H;
+        y += spacing
+    ) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            0,
+            y
+        );
+
+        ctx.lineTo(
+            W,
+            y
+        );
+
+        ctx.stroke();
+
+    }
+
+}
+
+
+/* =========================================================
+   CONNECTIONS
+========================================================= */
+
+function drawConnections(
+    time
+) {
+
+    connections.forEach(
+        connection => {
+
+            const a =
+                connection.a;
+
+            const b =
+                connection.b;
+
+
+            /*
+             * Connection brightness
+             * based on neuron activity.
+             */
+
+            const strength =
+                (
+                    a.activation +
+                    b.activation
+                ) / 2;
+
+
+            ctx.strokeStyle =
+                `rgba(
+                    40,
+                    150,
+                    190,
+                    ${0.04 +
+                    strength * 0.14}
+                )`;
+
+
+            ctx.lineWidth =
+                0.6 +
+                strength;
+
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                a.x,
+                a.y
+            );
+
+
+            /*
+             * Curved connection.
+             */
+
+            const middleX =
+                (
+                    a.x +
+                    b.x
+                ) / 2;
+
+
+            ctx.bezierCurveTo(
+
+                middleX,
+                a.y,
+
+                middleX,
+                b.y,
+
+                b.x,
+                b.y
+
+            );
+
+
+            ctx.stroke();
+
+
+            /*
+             * Active pulse glow.
+             */
+
+            if (
+                connection.pulse >
+                0
+            ) {
+
+                ctx.strokeStyle =
+                    `rgba(
+                        80,
+                        230,
+                        255,
+                        ${connection.pulse}
+                    )`;
+
+                ctx.lineWidth =
+                    1.5 +
+                    connection.pulse *
+                    2;
+
+
+                ctx.beginPath();
+
+                ctx.moveTo(
+                    a.x,
+                    a.y
+                );
+
+
+                ctx.bezierCurveTo(
+
+                    middleX,
+                    a.y,
+
+                    middleX,
+                    b.y,
+
+                    b.x,
+                    b.y
+
+                );
+
+
+                ctx.stroke();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   DRAW SIGNALS
+========================================================= */
+
+function drawSignals() {
+
+    signals.forEach(
+        signal => {
+
+            const connection =
+                signal.connection;
+
+
+            const a =
+                connection.a;
+
+            const b =
+                connection.b;
+
+
+            let t =
+                signal.progress;
+
+
+            /*
+             * Cubic Bezier position.
+             */
+
+            const middleX =
+                (
+                    a.x +
+                    b.x
+                ) / 2;
+
+
+            const p0 = {
+
+                x:
+                    a.x,
+
+                y:
+                    a.y
+
+            };
+
+
+            const p1 = {
+
+                x:
+                    middleX,
+
+                y:
+                    a.y
+
+            };
+
+
+            const p2 = {
+
+                x:
+                    middleX,
+
+                y:
+                    b.y
+
+            };
+
+
+            const p3 = {
+
+                x:
+                    b.x,
+
+                y:
+                    b.y
+
+            };
+
+
+            const x =
+                Math.pow(
+                    1 - t,
+                    3
+                ) *
+                p0.x +
+
+                3 *
+                Math.pow(
+                    1 - t,
+                    2
+                ) *
+                t *
+                p1.x +
+
+                3 *
+                (
+                    1 - t
+                ) *
+                Math.pow(
+                    t,
+                    2
+                ) *
+                p2.x +
+
+                Math.pow(
+                    t,
+                    3
+                ) *
+                p3.x;
+
+
+            const y =
+                Math.pow(
+                    1 - t,
+                    3
+                ) *
+                p0.y +
+
+                3 *
+                Math.pow(
+                    1 - t,
+                    2
+                ) *
+                t *
+                p1.y +
+
+                3 *
+                (
+                    1 - t
+                ) *
+                Math.pow(
+                    t,
+                    2
+                ) *
+                p2.y +
+
+                Math.pow(
+                    t,
+                    3
+                ) *
+                p3.y;
+
+
+            /*
+             * Signal glow.
+             */
+
+            ctx.shadowBlur =
+                18;
+
+            ctx.shadowColor =
+                "#55eaff";
+
+
+            ctx.fillStyle =
+                "#b8f8ff";
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+
+                x,
+
+                y,
+
+                signal.size +
+                2,
+
+                0,
+
+                Math.PI * 2
+
+            );
+
+            ctx.fill();
+
+
+            ctx.shadowBlur =
+                0;
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   DRAW NEURONS
+========================================================= */
+
+function drawNeurons(
+    time
+) {
+
+    layers.forEach(
+        (layer, layerIndex) => {
+
+            layer.forEach(
+                node => {
+
+                    /*
+                     * Organic movement.
+                     */
+
+                    const offset =
+                        Math.sin(
+                            time *
+                            0.8 +
+                            node.phase
+                        ) *
+                        2;
+
+
+                    node.y =
+                        node.baseY +
+                        offset;
+
+
+                    /*
+                     * Mouse influence.
+                     */
+
+                    const dx =
+                        pointer.x -
+                        node.x;
+
+                    const dy =
+                        pointer.y -
+                        node.y;
+
+                    const distance =
+                        Math.sqrt(
+                            dx * dx +
+                            dy * dy
+                        );
+
+
+                    let mouseBoost =
+                        0;
+
+
+                    if (
+                        distance <
+                        130
+                    ) {
+
+                        mouseBoost =
+                            1 -
+                            distance /
+                            130;
+
+                    }
+
+
+                    const activation =
+                        Math.min(
+                            1,
+                            node.activation +
+                            mouseBoost *
+                            0.8
+                        );
+
+
+                    /*
+                     * Glow size.
+                     */
+
+                    const glow =
+                        15 +
+                        activation *
+                        35;
+
+
+                    /*
+                     * Node glow.
+                     */
+
+                    ctx.shadowBlur =
+                        glow;
+
+                    ctx.shadowColor =
+                        activation >
+                        0.5
+
+                        ? "#36eaff"
+
+                        : "#16758d";
+
+
+                    /*
+                     * Outer circle.
+                     */
+
+                    ctx.fillStyle =
+                        `rgba(
+                            30,
+                            150,
+                            180,
+                            ${0.2 +
+                            activation *
+                            0.6}
+                        )`;
+
+
+                    ctx.beginPath();
+
+                    ctx.arc(
+
+                        node.x,
+
+                        node.y,
+
+                        node.radius +
+                        activation *
+                        5,
+
+                        0,
+
+                        Math.PI * 2
+
+                    );
+
+                    ctx.fill();
+
+
+                    /*
+                     * Inner core.
+                     */
+
+                    ctx.fillStyle =
+                        activation >
+                        0.5
+
+                        ? "#d8fbff"
+
+                        : "#58b8cc";
+
+
+                    ctx.beginPath();
+
+                    ctx.arc(
+
+                        node.x,
+
+                        node.y,
+
+                        2 +
+                        activation *
+                        3,
+
+                        0,
+
+                        Math.PI * 2
+
+                    );
+
+                    ctx.fill();
+
+
+                    ctx.shadowBlur =
+                        0;
+
+
+                    /*
+                     * Ring around active
+                     * neurons.
+                     */
+
+                    if (
+                        activation >
+                        0.6
+                    ) {
+
+                        ctx.strokeStyle =
+                            `rgba(
+                                80,
+                                230,
+                                255,
+                                ${activation}
+                            )`;
+
+                        ctx.lineWidth =
+                            1;
+
+
+                        ctx.beginPath();
+
+                        ctx.arc(
+
+                            node.x,
+
+                            node.y,
+
+                            12 +
+                            Math.sin(
+                                time * 4 +
+                                node.phase
+                            ) *
+                            3,
+
+                            0,
+
+                            Math.PI * 2
+
+                        );
+
+                        ctx.stroke();
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   LAYER LABELS
+========================================================= */
+
+function drawLabels() {
+
+    const names = [
+
+        "INPUT",
+
+        "HIDDEN",
+
+        "HIDDEN",
+
+        "HIDDEN",
+
+        "HIDDEN",
+
+        "OUTPUT"
+
+    ];
+
+
+    layers.forEach(
+        (layer, i) => {
+
+            if (
+                !layer.length
+            )
+                return;
+
+
+            const x =
+                layer[0].x;
+
+
+            ctx.fillStyle =
+                "rgba(100,210,240,0.25)";
+
+            ctx.font =
+                "8px Arial";
+
+
+            ctx.textAlign =
+                "center";
+
+
+            ctx.letterSpacing =
+                "3px";
+
+
+            ctx.fillText(
+
+                names[i],
+
+                x,
+
+                H * 0.88
+
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   CENTRAL DATA FLOW
+========================================================= */
+
+function drawFlowIndicator(
+    time
+) {
+
+    /*
+     * Small moving particles
+     * around network center.
+     */
+
+    for (
+        let i = 0;
+        i < 25;
+        i++
+    ) {
+
+        const angle =
+            time *
+            0.3 +
+            i *
+            0.25;
+
+
+        const radius =
+            250 +
+            Math.sin(
+                time +
+                i
+            ) *
+            30;
+
+
+        const x =
+            W / 2 +
+            Math.cos(
+                angle
+            ) *
+            radius;
+
+
+        const y =
+            H / 2 +
+            Math.sin(
+                angle
+            ) *
+            radius *
+            0.45;
+
+
+        ctx.fillStyle =
+            "rgba(50,180,220,0.2)";
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            x,
+            y,
+            1,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+    }
+
+}
+
+
+/* =========================================================
+   UPDATE SIGNALS
+========================================================= */
+
+function updateSignals() {
+
+    for (
+        let i =
+            signals.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const signal =
+            signals[i];
+
+
+        signal.progress +=
+            signal.speed;
+
+
+        if (
+            signal.progress >=
+            1
+        ) {
+
+            const target =
+                signal.connection.b;
+
+
+            target.activation =
+                1;
+
+            target.targetActivation =
+                1;
+
+
+            /*
+             * Continue propagation.
+             */
+
+            propagate(
+                target
+            );
+
+
+            signals.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+
+    /*
+     * Update connection pulses.
+     */
+
+    connections.forEach(
+        connection => {
+
+            connection.pulse *=
+                0.92;
+
+        }
+    );
+
+
+    document.getElementById(
+        "signalCount"
+    ).textContent =
+        signals.length;
+
+}
+
+
+/* =========================================================
+   UPDATE ACTIVATIONS
+========================================================= */
+
+function updateNeurons(
+    time
+) {
+
+    let total =
+        0;
+
+    let count =
+        0;
+
+
+    layers.forEach(
+        layer => {
+
+            layer.forEach(
+                node => {
+
+                    /*
+                     * Slowly decay.
+                     */
+
+                    node.activation *=
+                        0.97;
+
+
+                    /*
+                     * Random target.
+                     */
+
+                    if (
+                        Math.random() <
+                        0.005
+                    ) {
+
+                        node.targetActivation =
+                            Math.random();
+
+                    }
+
+
+                    node.activation +=
+                        (
+                            node.targetActivation -
+                            node.activation
+                        ) *
+                        0.02;
+
+
+                    total +=
+                        node.activation;
+
+                    count++;
+
+                }
+            );
+
+        }
+    );
+
+
+    const activity =
+        Math.floor(
+            (
+                total /
+                count
+            ) *
+            100
+        );
+
+
+    document.getElementById(
+        "activity"
+    ).textContent =
+        activity;
+
+}
+
+
+/* =========================================================
+   MAIN ANIMATION
+========================================================= */
+
+function animate(
+    timestamp
+) {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    const time =
+        timestamp / 1000;
+
+
+    /*
+     * Smooth pointer.
+     */
+
+    pointer.x +=
+        (
+            pointer.targetX -
+            pointer.x
+        ) *
+        0.08;
+
+
+    pointer.y +=
+        (
+            pointer.targetY -
+            pointer.y
+        ) *
+        0.08;
+
+
+    /*
+     * Automatic network
+     * activity.
+     */
+
+    if (
+        Math.random() <
+        0.035
+    ) {
+
+        randomActivation();
+
+    }
+
+
+    /*
+     * Render.
+     */
+
+    drawBackground();
+
+    drawGrid();
+
+    drawFlowIndicator(
+        time
+    );
+
+    drawConnections(
+        time
+    );
+
+    drawSignals();
+
+    drawNeurons(
+        time
+    );
+
+    drawLabels();
+
+
+    /*
+     * Update.
+     */
+
+    updateSignals();
+
+    updateNeurons(
+        time
+    );
+
+}
+
+
+/* =========================================================
+   START
+========================================================= */
+
+resize();
+
+requestAnimationFrame(
+    animate
+);
+
+</script>
+
+</body>
+
+</html>
